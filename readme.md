@@ -1,6 +1,6 @@
 # Devhub Cache API
 
-This repository leverages PostgreSQL as a caching layer to reduce DevHub's RPC calls to a rate of 1 per second. The API is built using Rust's Rocket framework and deployed on Fly.io.
+This repository leverages PostgreSQL as a caching layer to reduce DevHub's RPC calls. The API is built using Rust's Rocket framework and deployed on Fly.io.
 
 ## Develop
 

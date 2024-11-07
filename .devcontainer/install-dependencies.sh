@@ -1,8 +1,15 @@
 #!/bin/bash
 sudo apt update
-sudo apt install -y postgresql
+sudo apt install -y postgresql\
+    libssl-dev \
+    ca-certificates \
+    libudev-dev \
+    libusb-1.0-0-dev \
+    pkg-config \
+    libudev-dev \
+    build-essential
 
-cargo install sqlx-cli
+cargo install sqlx-cli cargo-watch
 
 # Start PostgreSQL service
 sudo service postgresql start
@@ -19,7 +26,7 @@ echo "export DATABASE_URL=postgres://devhub_cache_api_rs:password@127.0.0.1:5432
 source ~/.bashrc
 
 # Create the database using SQLx
-sqlx database create
+cargo sqlx database create
 
 # Run migrations
-sqlx migrate run
+cargo sqlx migrate run
