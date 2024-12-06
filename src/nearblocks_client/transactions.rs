@@ -53,13 +53,16 @@ pub async fn update_nearblocks_data(
         nearblocks_client::transactions::process(&nearblocks_unwrapped.txns, db.into(), contract)
             .await;
 
+    let new_cursor = nearblocks_unwrapped.cursor.unwrap();
+    eprintln!("New cursor is {}", new_cursor.clone());
+
     if let Some(transaction) = nearblocks_unwrapped.txns.last() {
         let timestamp_nano = transaction.block_timestamp.parse::<i64>().unwrap();
         let _ = db
             .set_last_updated_info(
                 timestamp_nano,
                 transaction.block.block_height,
-                nearblocks_unwrapped.cursor.as_ref().unwrap().clone(),
+                new_cursor.clone(),
             )
             .await;
     }
