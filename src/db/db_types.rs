@@ -17,6 +17,7 @@ pub struct ProposalRecord {
 pub struct LastUpdatedInfo {
     pub after_date: i64,
     pub after_block: i64,
+    pub cursor: String,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]

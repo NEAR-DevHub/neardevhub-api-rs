@@ -90,14 +90,14 @@ async fn get_rfps(
     let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.0
+    if current_timestamp_nano - last_updated_info.after_date
         >= chrono::Duration::seconds(60).num_nanoseconds().unwrap()
     {
         update_nearblocks_data(
             db.inner(),
             contract.inner(),
             nearblocks_api_key.inner(),
-            last_updated_info.2,
+            Some(last_updated_info.after_block),
         )
         .await;
     }
@@ -136,15 +136,14 @@ async fn get_rfp_with_snapshots(
     let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.0
+    if current_timestamp_nano - last_updated_info.after_date
         >= chrono::Duration::seconds(60).num_nanoseconds().unwrap()
     {
         update_nearblocks_data(
             db.inner(),
             contract.inner(),
             nearblocks_api_key.inner(),
-            // TODO stop using tuples
-            last_updated_info.2,
+            Some(last_updated_info.after_block),
         )
         .await;
     }

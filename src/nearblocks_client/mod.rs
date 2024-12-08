@@ -47,9 +47,10 @@ impl ApiClient {
         limit: Option<i32>,
         order: Option<String>,
         page: Option<i32>,
+        after_block: Option<i64>,
     ) -> Result<ApiResponse, reqwest::Error> {
         let base_params = self.build_pagination_params(limit, order, page);
-        let query_params = self.add_cursor_param(base_params, cursor);
+        let query_params = self.add_cursor_param(base_params, cursor, after_block);
         let endpoint = format!("v1/account/{}/txns", account_id);
         let url = self.base_url.clone() + &endpoint + &query_params;
 
@@ -85,17 +86,71 @@ impl ApiClient {
     ) -> String {
         format!(
             "?per_page={}&order={}&page={}",
-            limit.unwrap_or(50),
+            limit.unwrap_or(25),
             order.unwrap_or_else(|| "asc".to_string()),
             page.unwrap_or(1),
         )
     }
 
-    fn add_cursor_param(&self, base_params: String, cursor: String) -> String {
+    fn add_cursor_param(
+        &self,
+        base_params: String,
+        cursor: String,
+        after_block: Option<i64>,
+    ) -> String {
         if cursor.is_empty() {
-            format!("{}&after_block=0", base_params)
+            format!("{}&after_block={}", base_params, after_block.unwrap_or(0))
         } else {
             format!("{}&cursor={}", base_params, cursor)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_cursor_param() {
+        let client = ApiClient::default();
+        let base_params = "?per_page=50&order=asc&page=1".to_string();
+
+        // Test case 1: Empty cursor with default after_block
+        let result = client.add_cursor_param(base_params.clone(), "".to_string(), None);
+        assert_eq!(result, "?per_page=50&order=asc&page=1&after_block=0");
+
+        // Test case 2: Empty cursor with specific after_block
+        let result = client.add_cursor_param(base_params.clone(), "".to_string(), Some(12345));
+        assert_eq!(result, "?per_page=50&order=asc&page=1&after_block=12345");
+
+        // Test case 3: Non-empty cursor (after_block should be ignored)
+        let result =
+            client.add_cursor_param(base_params.clone(), "abc123".to_string(), Some(12345));
+        assert_eq!(result, "?per_page=50&order=asc&page=1&cursor=abc123");
+    }
+
+    #[test]
+    fn test_build_pagination_params() {
+        let client = ApiClient::default();
+
+        // Test case 1: All parameters are None (default values)
+        let result = client.build_pagination_params(None, None, None);
+        assert_eq!(result, "?per_page=25&order=asc&page=1");
+
+        // Test case 2: Custom limit, default others
+        let result = client.build_pagination_params(Some(50), None, None);
+        assert_eq!(result, "?per_page=50&order=asc&page=1");
+
+        // Test case 3: Custom order, default others
+        let result = client.build_pagination_params(None, Some("desc".to_string()), None);
+        assert_eq!(result, "?per_page=25&order=desc&page=1");
+
+        // Test case 4: Custom page, default others
+        let result = client.build_pagination_params(None, None, Some(3));
+        assert_eq!(result, "?per_page=25&order=asc&page=3");
+
+        // Test case 5: All parameters custom
+        let result = client.build_pagination_params(Some(100), Some("desc".to_string()), Some(5));
+        assert_eq!(result, "?per_page=100&order=desc&page=5");
     }
 }

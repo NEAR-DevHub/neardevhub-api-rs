@@ -1,5 +1,7 @@
 use self::proposal_types::*;
-use crate::db::db_types::{ProposalSnapshotRecord, ProposalWithLatestSnapshotView};
+use crate::db::db_types::{
+    LastUpdatedInfo, ProposalSnapshotRecord, ProposalWithLatestSnapshotView,
+};
 use crate::db::DB;
 use crate::nearblocks_client::transactions::update_nearblocks_data;
 use crate::rpc_service::RpcService;
@@ -92,14 +94,14 @@ async fn get_proposals(
     let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.0
+    if current_timestamp_nano - last_updated_info.after_date
         >= chrono::Duration::seconds(60).num_nanoseconds().unwrap()
     {
         update_nearblocks_data(
             db.inner(),
             contract.inner(),
             nearblocks_api_key.inner(),
-            last_updated_info.2,
+            Some(last_updated_info.after_block),
         )
         .await;
     }
@@ -125,14 +127,14 @@ async fn get_proposal_with_all_snapshots(
     let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.0
+    if current_timestamp_nano - last_updated_info.after_date
         >= chrono::Duration::seconds(60).num_nanoseconds().unwrap()
     {
         update_nearblocks_data(
             db.inner(),
             contract.inner(),
             nearblocks_api_key.inner(),
-            last_updated_info.2,
+            Some(last_updated_info.after_block),
         )
         .await;
     }
@@ -147,12 +149,34 @@ async fn get_proposal_with_all_snapshots(
     }
 }
 
-#[get("/info/<cursor>")]
-async fn set_timestamp(cursor: &str, db: &State<DB>) -> Result<(), Status> {
-    match db.set_last_updated_info(0, 0, cursor.to_string()).await {
+#[get("/info/cursor/<cursor>")]
+async fn set_cursor(cursor: &str, db: &State<DB>) -> Result<(), Status> {
+    match db.set_last_updated_cursor(cursor.to_string()).await {
         Ok(()) => Ok(()),
         Err(e) => {
             eprintln!("Error updating timestamp: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
+}
+
+#[get("/info/timestamp/<timestamp>")]
+async fn set_timestamp(timestamp: i64, db: &State<DB>) -> Result<(), Status> {
+    match db.set_last_updated_timestamp(timestamp).await {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            eprintln!("Error updating timestamp: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
+}
+
+#[get("/info/block/<block>")]
+async fn set_block(block: i64, db: &State<DB>) -> Result<(), Status> {
+    match db.set_last_updated_block(block).await {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            eprintln!("Error updating block: {:?}", e);
             Err(Status::InternalServerError)
         }
     }
@@ -190,9 +214,9 @@ async fn clean(db: &State<DB>) -> Result<(), Status> {
 }
 
 #[get("/info")]
-async fn get_timestamp(db: &State<DB>) -> Result<Json<(i64, i64, String)>, Status> {
-    let (timestamp, block_height, cursor) = db.get_last_updated_info().await.unwrap();
-    Ok(Json((timestamp, block_height, cursor)))
+async fn get_timestamp(db: &State<DB>) -> Result<Json<LastUpdatedInfo>, Status> {
+    let info = db.get_last_updated_info().await.unwrap();
+    Ok(Json(info))
 }
 
 #[utoipa::path(get, path = "/proposal/{proposal_id}")]
@@ -238,7 +262,9 @@ pub fn stage() -> rocket::fairing::AdHoc {
                     get_timestamp,
                     search,
                     clean,
-                    reset
+                    reset,
+                    set_cursor,
+                    set_block,
                 ],
             )
             .mount(

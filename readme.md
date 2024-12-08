@@ -38,4 +38,26 @@ sqlx migrate run
 Compares the migration history of the running database against the `migrations/` folder and runs
 any scripts that are still pending.
 
+## Deploy
+
+Until the ci/cd.yml is fixed the only way to deploy is with the fly cli.
+
+Install for linux:
+```sh
+curl -L https://fly.io/install.sh | sh
+```
+
+Install for Mac:
+```sh
+brew install flyctl
+```
+
+Then 
+```
+fly deploy -c fly.*.toml
+```
+
+
+
+
 

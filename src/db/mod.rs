@@ -16,8 +16,8 @@ pub struct DB(PgPool);
 pub mod db_types;
 
 use db_types::{
-    BlockHeight, ProposalSnapshotRecord, ProposalWithLatestSnapshotView, RfpSnapshotRecord,
-    RfpWithLatestSnapshotView,
+    BlockHeight, LastUpdatedInfo, ProposalSnapshotRecord, ProposalWithLatestSnapshotView,
+    RfpSnapshotRecord, RfpWithLatestSnapshotView,
 };
 
 impl DB {
@@ -60,7 +60,7 @@ impl DB {
         }
     }
 
-    pub async fn get_last_updated_info(&self) -> Result<(i64, i64, String), Error> {
+    pub async fn get_last_updated_info(&self) -> Result<LastUpdatedInfo, Error> {
         let rec = query!(
             r#"
             SELECT after_date, after_block, cursor FROM last_updated_info
@@ -68,10 +68,13 @@ impl DB {
         )
         .fetch_one(&self.0)
         .await?;
-        Ok((rec.after_date, rec.after_block, rec.cursor))
+        Ok(LastUpdatedInfo {
+            after_date: rec.after_date,
+            after_block: rec.after_block,
+            cursor: rec.cursor,
+        })
     }
 
-    // TODO: Remove after_date and block_height if cursor is working
     pub async fn set_last_updated_info(
         &self,
         after_date: i64,
@@ -79,8 +82,8 @@ impl DB {
         cursor: String,
     ) -> Result<(), Error> {
         println!(
-            "Storing timestamp: {} and block: {}",
-            after_date, after_block
+            "Storing timestamp: {} and block: {} and cursor: {}",
+            after_date, after_block, cursor
         );
         println!("Storing date: {}", timestamp_to_date_string(after_date));
         sqlx::query!(
@@ -90,6 +93,46 @@ impl DB {
             after_date,
             after_block,
             cursor
+        )
+        .execute(&self.0)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn set_last_updated_timestamp(&self, after_date: i64) -> Result<(), Error> {
+        println!("Storing timestamp: {}", after_date);
+        println!("Storing date: {}", timestamp_to_date_string(after_date));
+        sqlx::query!(
+            r#"
+          UPDATE last_updated_info SET after_date = $1
+          "#,
+            after_date,
+        )
+        .execute(&self.0)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn set_last_updated_block(&self, after_block: BlockHeight) -> Result<(), Error> {
+        println!("Storing block: {}", after_block);
+        sqlx::query!(
+            r#"
+          UPDATE last_updated_info SET after_block = $1
+          "#,
+            after_block,
+        )
+        .execute(&self.0)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn set_last_updated_cursor(&self, cursor: String) -> Result<(), Error> {
+        println!("Storing cursor: {}", cursor);
+        sqlx::query!(
+            r#"
+          UPDATE last_updated_info SET cursor = $1
+          "#,
+            cursor,
         )
         .execute(&self.0)
         .await?;
