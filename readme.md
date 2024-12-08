@@ -20,6 +20,8 @@ cargo watch -q -c -w src/ -x 'run '
 
 ### Create and run migrations
 
+*Github codespace*: If the database server is not running, you can start it by typing `sudo service postgresql start`.
+
 ```bash
 sqlx migrate add <name>
 ```

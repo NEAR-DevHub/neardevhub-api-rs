@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n          UPDATE last_updated_info SET cursor = $1\n          ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d6e8185738eff765fbe3a46fef698d2758c6f29dc16a87b7699dcc1ef119a39b"
+}

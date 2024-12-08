@@ -382,21 +382,9 @@ impl DB {
     ) -> anyhow::Result<(Vec<ProposalWithLatestSnapshotView>, i64)> {
         let sql = r#"
             SELECT
-                ps.*,
-                p.author_id
+               *
             FROM
-                proposals p
-            INNER JOIN (
-                SELECT
-                    proposal_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    proposal_snapshots
-                GROUP BY
-                    proposal_id
-            ) latest_snapshots ON p.id = latest_snapshots.proposal_id
-            INNER JOIN proposal_snapshots ps ON latest_snapshots.proposal_id = ps.proposal_id
-                AND latest_snapshots.max_ts = ps.ts
+                proposals_with_latest_snapshot ps
             WHERE
                 to_tsvector('english', coalesce(ps.name, '') || ' ' || coalesce(ps.summary, '') || ' ' || coalesce(ps.description, '')) @@ plainto_tsquery($1)
                 OR lower(ps.name) ILIKE $1
@@ -417,18 +405,7 @@ impl DB {
             SELECT
                 COUNT(*)
             FROM
-                proposals p
-            INNER JOIN (
-                SELECT
-                    proposal_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    proposal_snapshots
-                GROUP BY
-                    proposal_id
-            ) latest_snapshots ON p.id = latest_snapshots.proposal_id
-            INNER JOIN proposal_snapshots ps ON latest_snapshots.proposal_id = ps.proposal_id
-                AND latest_snapshots.max_ts = ps.ts
+                proposals_with_latest_snapshot ps
             WHERE
                 to_tsvector('english', coalesce(ps.name, '') || ' ' || coalesce(ps.summary, '') || ' ' || coalesce(ps.description, '')) @@ plainto_tsquery($1)
                 OR lower(ps.name) ILIKE $1
@@ -448,25 +425,14 @@ impl DB {
         &self,
         id: i32,
     ) -> anyhow::Result<ProposalWithLatestSnapshotView> {
+        println!("Getting proposal with latest snapshot by id: {:?}", id);
         let sql = r#"
               SELECT
-                  ps.*,
-                  p.author_id
+                 *
               FROM
-                  proposals p
-              INNER JOIN (
-                  SELECT
-                      proposal_id,
-                      MAX(ts) AS max_ts
-                  FROM
-                      proposal_snapshots
-                  GROUP BY
-                      proposal_id
-              ) latest_snapshots ON p.id = latest_snapshots.proposal_id
-              INNER JOIN proposal_snapshots ps ON latest_snapshots.proposal_id = ps.proposal_id
-                  AND latest_snapshots.max_ts = ps.ts
+                 proposals_with_latest_snapshot ps
               WHERE
-                  p.id = $1
+                  ps.proposal_id = $1
           "#;
         // Start Generation Here
         let proposal = sqlx::query_as::<_, ProposalWithLatestSnapshotView>(sql)

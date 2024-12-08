@@ -1,6 +1,7 @@
 #!/bin/bash
 sudo apt update
 sudo apt install -y postgresql
+sudo apt install libudev-dev
 
 cargo install sqlx-cli
 
