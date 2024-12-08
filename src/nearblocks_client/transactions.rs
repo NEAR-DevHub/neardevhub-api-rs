@@ -84,7 +84,11 @@ pub async fn update_nearblocks_data(
 }
 
 pub async fn process(
+    transactions: &[Transaction],
+    db: &State<DB>,
+    contract: &AccountId,
 ) -> Result<(), Status> {
+    for transaction in transactions.iter() {
         if let Some(action) = transaction
             .actions
             .as_ref()
