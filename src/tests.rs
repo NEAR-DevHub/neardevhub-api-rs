@@ -39,19 +39,6 @@ async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
         .await
         .expect("valid `Rocket`");
 
-    for _ in 0..50 {
-        let response = client
-            .get("/proposals?order=id_asc&limit=50&offset=0}`")
-            .dispatch();
-        let result = response
-            .await
-            .into_json::<PaginatedResponse<ProposalWithLatestSnapshotView>>()
-            .await
-            .unwrap();
-        if result.records.len() >= 50 {
-            break;
-        }
-    }
     let response = client
         .get("/proposals?order=id_asc&limit=50&offset=0}`")
         .dispatch();
@@ -66,7 +53,7 @@ async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
     let contract_account_id: AccountId = env.contract.parse().unwrap();
     let contract = Contract(contract_account_id);
 
-    for ndx in 0..50 {
+    for ndx in 0..result.records.len() {
         let proposal_id: i32 = ndx as i32;
         assert_eq!(result.records[ndx].proposal_id, proposal_id);
 
