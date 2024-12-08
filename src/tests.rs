@@ -1,3 +1,4 @@
+use futures::future::join_all;
 use near_api::prelude::Contract;
 
 use crate::{db::db_types::ProposalWithLatestSnapshotView, types::PaginatedResponse, Env};
@@ -25,51 +26,72 @@ async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
     let client = Client::tracked(super::rocket())
         .await
         .expect("valid `Rocket`");
-
-    let response = client
-        .get("/proposals?order=id_asc&limit=5&offset=0`")
-        .dispatch();
+    let offset = 100;
+    let limit = 50;
+    let query = format!("/proposals?order=id_asc&limit={}&offset={}", limit, offset);
+    // First page
+    let response = client.get(query).dispatch();
     let result = response
         .await
         .into_json::<PaginatedResponse<ProposalWithLatestSnapshotView>>()
         .await
         .unwrap();
-    assert_eq!(result.records.len(), 5);
+    assert_eq!(result.records.len(), 50);
+
+    eprintln!(
+        "Results {:?}",
+        result
+            .records
+            .clone()
+            .into_iter()
+            .map(|r| r.proposal_id)
+            .collect::<Vec<i32>>()
+    );
 
     let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
     let contract_account_id: AccountId = env.contract.parse().unwrap();
     let contract = Contract(contract_account_id);
 
-    for ndx in 0..result.records.len() {
-        let proposal_id: i32 = ndx as i32;
-        assert_eq!(result.records[ndx].proposal_id, proposal_id);
+    // Create a Vec of futures for all blockchain calls
+    let futures = result.records.iter().enumerate().map(|(ndx, record)| {
+        let proposal_id = ndx as i32 + offset;
+        let contract = contract.clone();
+        let record = record.clone();
 
-        let call = contract
-            .call_function("get_proposal", json!({"proposal_id": proposal_id}))
-            .unwrap();
-        let proposal: Value = call.read_only().fetch_from_mainnet().await.unwrap().data;
+        async move {
+            let call = contract
+                .call_function("get_proposal", json!({"proposal_id": proposal_id}))
+                .unwrap();
+            let proposal: Value = call.read_only().fetch_from_mainnet().await.unwrap().data;
+
+            // Return tuple of data needed for assertions
+            (proposal_id, proposal, record)
+        }
+    });
+
+    // Execute all futures concurrently
+    let results = join_all(futures).await;
+
+    // Perform assertions on results
+    for (proposal_id, proposal, record) in results {
+        assert_eq!(record.proposal_id, proposal_id);
+
         eprintln!(
             "proposal {:?}, {:?}, {:?}, {:?}",
             proposal_id,
-            result.records[ndx].block_height.unwrap(),
+            record.block_height.unwrap(),
             proposal["snapshot"]["name"],
             proposal["snapshot"]["timeline"]["status"]
         );
+
         assert_eq!(
             proposal["snapshot"]["name"].as_str().unwrap(),
-            result.records[ndx].clone().name.unwrap()
+            record.name.unwrap()
         );
 
-        let timeline: Value = serde_json::from_str(
-            result.records[ndx]
-                .clone()
-                .timeline
-                .unwrap()
-                .as_str()
-                .unwrap(),
-        )
-        .unwrap();
-        eprint!("timeline {:?}", timeline["status"]);
+        let timeline: Value =
+            serde_json::from_str(record.timeline.unwrap().as_str().unwrap()).unwrap();
+
         assert_eq!(
             proposal["snapshot"]["timeline"]["status"],
             timeline["status"]
