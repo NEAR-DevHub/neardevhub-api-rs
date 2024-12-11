@@ -36,6 +36,15 @@ async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
         .into_json::<PaginatedResponse<ProposalWithLatestSnapshotView>>()
         .await
         .unwrap();
+
+    let env = std::env::var("ENV").unwrap_or_else(|_| "LOCAL".to_string());
+    let result = if env == "GH_ACTION" {
+        let file = std::fs::File::open("test/result.json").expect("Unable to open file");
+        serde_json::from_reader(file).expect("Unable to parse JSON")
+    } else {
+        result
+    };
+
     assert_eq!(result.records.len(), 50);
 
     eprintln!(

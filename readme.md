@@ -58,6 +58,7 @@ fly deploy -c fly.*.toml
 ```
 
 
-
+How to deploy when Starting from a blockheight. For instance templar we added proposals removed everything and rebuild it
+Templar contract was deleted after https://nearblocks.io/txns/FzKXtDhvR3oFWxqDvfXNVp8HUgmcrNkYtmccEjbaFCMj this txn. So we only want to indexer after this.
 
 
