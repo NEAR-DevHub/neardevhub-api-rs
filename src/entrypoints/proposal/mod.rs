@@ -15,7 +15,6 @@ use rocket::{get, http::Status, State};
 use std::convert::TryInto;
 pub mod proposal_types;
 
-// TODO Use caching of search terms
 #[utoipa::path(get, path = "/proposals/search?<input>", params(
   ("input"= &str, Path, description ="The string to search for in proposal name, description, summary, and category fields."),
 ))]
