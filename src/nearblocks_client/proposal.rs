@@ -1,9 +1,9 @@
-use crate::db::db_types::{BlockHeight, ProposalSnapshotRecord, Timestamp};
+use crate::db::db_types::ProposalSnapshotRecord;
 use crate::db::DB;
 use crate::entrypoints::proposal::proposal_types::{
     FromContractProposal, PartialEditProposalArgs, SetBlockHeightCallbackArgs,
 };
-use crate::nearblocks_client::types::{LinkedProposals, Transaction, BLOCK_HEIGHT_OFFSET};
+use crate::nearblocks_client::types::{Transaction, BLOCK_HEIGHT_OFFSET};
 use crate::rpc_service::RpcService;
 use devhub_shared::proposal::VersionedProposal;
 use near_account_id::AccountId;
