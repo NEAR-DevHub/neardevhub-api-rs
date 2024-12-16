@@ -745,6 +745,7 @@ dependencies = [
  "devhub-shared",
  "dotenvy",
  "envy",
+ "futures",
  "near-account-id",
  "near-api",
  "near-jsonrpc-client",

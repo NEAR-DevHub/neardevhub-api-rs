@@ -20,6 +20,8 @@ cargo watch -q -c -w src/ -x 'run '
 
 ### Create and run migrations
 
+*Github codespace*: If the database server is not running, you can start it by typing `sudo service postgresql start`.
+
 ```bash
 sqlx migrate add <name>
 ```
@@ -56,6 +58,7 @@ fly deploy -c fly.*.toml
 ```
 
 
-
+How to deploy when Starting from a blockheight. For instance templar we added proposals removed everything and rebuild it
+Templar contract was deleted after https://nearblocks.io/txns/FzKXtDhvR3oFWxqDvfXNVp8HUgmcrNkYtmccEjbaFCMj this txn. So we only want to indexer after this.
 
 

@@ -32,6 +32,7 @@ near-api = { git = "https://github.com/near/near-api-rs" }
 near-jsonrpc-client = "0.14.0"
 regex = "1.11.1"
 base64 = "0.22.1"
+futures = "0.3.31"
 
 [features]
 default = ["workspaces"]

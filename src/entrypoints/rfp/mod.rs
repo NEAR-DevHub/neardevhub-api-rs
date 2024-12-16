@@ -12,7 +12,6 @@ use rocket::{delete, get, http::Status, State};
 use std::convert::TryInto;
 pub mod rfp_types;
 
-// TODO Use caching of search terms
 #[utoipa::path(get, path = "/rfps/search/<input>", params(
   ("input"= &str, Path, description ="The string to search for in rfp name, description, summary, and category fields."),
 ))]
@@ -115,7 +114,6 @@ async fn get_rfps(
 #[utoipa::path(get, path = "/rfp/{rfp_id}")]
 #[get("/<rfp_id>")]
 async fn get_rfp(rfp_id: i32, contract: &State<AccountId>) -> Result<Json<VersionedRFP>, Status> {
-    // TODO Get cached rfp
     match RpcService::new(contract).get_rfp(rfp_id).await {
         Ok(rfp) => Ok(Json(rfp.data)),
         Err(e) => {

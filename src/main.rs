@@ -1,4 +1,3 @@
-pub mod api_background_service;
 pub mod db;
 pub mod entrypoints;
 pub mod nearblocks_client;
