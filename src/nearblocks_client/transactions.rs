@@ -161,6 +161,41 @@ mod tests {
     use std::collections::HashSet;
 
     #[tokio::test]
+    async fn test_process() {
+        use crate::db::DB;
+        use crate::nearblocks_client::transactions::process;
+        use crate::nearblocks_client::types::{Action, Block, ReceiptOutcome, Transaction};
+        use near_account_id::AccountId;
+        use rocket::State;
+
+        // Initialize a mock database (assuming you have a method to create an in-memory DB for testing)
+        let db = DB::new_in_memory().await;
+        let db_state = State::new(db);
+
+        // Define the contract AccountId
+        let contract: AccountId = "test_contract.near".parse().unwrap();
+
+        // Get the test transactions from  test/nearblocks-example.json
+        let transactions = serde_json::from_str::<Vec<Transaction>>(include_str!(
+            "../../test/nearblocks-example.json"
+        ))
+        .unwrap();
+
+        // Call the process function with the test transaction
+        let result = process(&transactions, &db_state, &contract).await;
+
+        // Assert that the process function completed successfully
+        assert!(result.is_ok());
+
+        // Optionally, verify that the expected changes were made in the database
+        // For example, check if the proposal was edited as expected
+        // Replace the following with actual database verification code
+        let proposal = db_state.get_proposal("test_proposal_id").await.unwrap();
+        assert_eq!(proposal.id, "test_proposal_id");
+        // ... additional assertions as needed
+    }
+
+    #[tokio::test]
     async fn test_fetch_all_transactions() {
         let api_key = std::env::var("NEARBLOCKS_API_KEY")
             .expect("NEARBLOCKS_API_KEY environment variable not set");

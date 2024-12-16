@@ -11,13 +11,38 @@ use serde_json::{json, Value};
  */
 
 /**
- * Search Proposals
- * Get Proposals
- * Get Proposal Snapshots
- * Search RFPs
- * Get RFPs
- * Get RFP Snapshots
+ * Test that if new proposals appear, they should also be added to the cache
+ * Test that status changes are updated in the cache
+ * Test that new comment block heights are registered
  */
+
+
+#[rocket::async_test]
+async fn test_new_proposals_appear_in_cache() {
+  use rocket::local::asynchronous::Client;
+
+    let client = Client::tracked(super::rocket())
+        .await
+        .expect("valid `Rocket`");
+    let offset = 100;
+    let limit = 50;
+    let query = format!("/proposals?order=id_asc&limit={}&offset={}", limit, offset);
+    // First page
+    let response = client.get(query).dispatch();
+    let result = response
+        .await
+        .into_json::<PaginatedResponse<ProposalWithLatestSnapshotView>>()
+        .await
+        .unwrap();
+
+    let env = std::env::var("ENV").unwrap_or_else(|_| "LOCAL".to_string());
+    let result = if env == "GH_ACTION" {
+        let file = std::fs::File::open("test/result.json").expect("Unable to open file");
+        serde_json::from_reader(file).expect("Unable to parse JSON")
+    } else {
+        result
+    };
+}
 
 #[rocket::async_test]
 async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {

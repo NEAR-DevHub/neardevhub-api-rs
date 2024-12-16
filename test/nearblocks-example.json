@@ -1,0 +1,1029 @@
+{
+  "cursor": "11249475397",
+  "txns": [{
+      "id": "11350390245",
+      "receipt_id": "A32HK9XzEnYy1SsYzpPKoViVGuXs8ziW9eTNyyRN9zra",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "2Xo5kiKeQ6YDzUo2Ku39Ys8LakzPDkzKdr6d5fPdA8dc",
+        "block_height": 135066054,
+        "block_timestamp": 1734297768066253300
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3604195726427,
+        "tokens_burnt": 360419572642700000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "6nwdcFercetfLREq9cJDxNLHwe4zbimDKg7NMRgQbvP3",
+      "included_in_block_hash": "HXmcoxpcPYsf6BHiJ7An5Ae5kzcyoXLLosS2xcB38xad",
+      "block_timestamp": "1734297764499770289",
+      "block": {
+        "block_height": 135066051
+      },
+      "receipt_conversion_tokens_burnt": "37662868217000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 360419572642700000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"[{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"yarotska.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/mention\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":165,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"nneoma.near\\\\\\\\\\\\\\\"}},{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/mention\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":165,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"nneoma.near\\\\\\\\\\\\\\\"}}]\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.7249131290207e+21
+      }
+    },
+    {
+      "id": "11350390242",
+      "receipt_id": "581mk8FR3hVuYpTzsG46M6osgZJuRTZPRRER31y1deXG",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "2Xo5kiKeQ6YDzUo2Ku39Ys8LakzPDkzKdr6d5fPdA8dc",
+        "block_height": 135066054,
+        "block_timestamp": 1734297768066253300
+      },
+      "receipt_outcome": {
+        "gas_burnt": 2985112147685,
+        "tokens_burnt": 298511214768500000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "6nwdcFercetfLREq9cJDxNLHwe4zbimDKg7NMRgQbvP3",
+      "included_in_block_hash": "HXmcoxpcPYsf6BHiJ7An5Ae5kzcyoXLLosS2xcB38xad",
+      "block_timestamp": "1734297764499770289",
+      "block": {
+        "block_height": 135066051
+      },
+      "receipt_conversion_tokens_burnt": "37662868217000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set_block_height_callback",
+        "deposit": 0,
+        "fee": 298511214768500000000,
+        "args": "{\"proposal\": {\"id\": 165, \"snapshot\": {\"name\": \"Summary of Work Activities: Hackbox Product Manager (November 20 - December 20)\", \"labels\": [\"Hackbox\", \"Event sponsorship\"], \"summary\": \"A summary of all completed work activities between the specified date range and all planned work for the next pay period.\", \"category\": \"Bounty\", \"timeline\": {\"status\": \"DRAFT\"}, \"editor_id\": \"nneoma.near\", \"timestamp\": \"1734297766681884974\", \"supervisor\": \"yarotska.near\", \"description\": \"- Supported the process of bounty and travel stipend delivery for all [REDACTED] hackathon winners and participants\\\\\\\\n- Contributed to [REDACTED] retrospectives\\\\\\\\n- Supplied a comprehensive database of new repositiories generated from DevHub-sponsored hackathons to Electric Capital for the 2024 Developer Report\\\\\\\\n- Wrote the Hackbox EOY report summarizing key metrics, achievements, collaborations, and forward-looking plans.\\\\\\\\n- Strategic planning around Hackbox V2 for 2025, roadmap development, leads mapping, and content planning\\\\\\\\n- Hackbox official website explorations and copywriting\\\\\\\\n- Attended weekly syncs for Events Working Group \\\\\\\\n\\\\\\\\n#### Timeline\\\\\\\\nStart: November 20 2024\\\\\\\\nEnd date: December 20 2024\\\\\\\\nTotal hours per week: 45\\\\\\\\nTotal hours: 180\\\\\\\\nHourly rate: $50/hr\\\\\\\\nTotal: $9000\", \"linked_proposals\": [], \"receiver_account\": \"nneoma.near\", \"requested_sponsor\": \"events-committee.near\", \"proposal_body_version\": \"V0\", \"requested_sponsorship_usd_amount\": \"9000\", \"requested_sponsorship_paid_in_currency\": \"USDC\"}, \"author_id\": \"nneoma.near\", \"snapshot_history\": [], \"social_db_post_block_height\": \"0\"}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.7249131290207e+21
+      }
+    },
+    {
+      "id": "11350390239",
+      "receipt_id": "4ZzM35hTA7c4qL9BBHN1Gxgx6yQMt4eG4rDQdMm9iGLp",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "2Xo5kiKeQ6YDzUo2Ku39Ys8LakzPDkzKdr6d5fPdA8dc",
+        "block_height": 135066054,
+        "block_timestamp": 1734297768066253300
+      },
+      "receipt_outcome": {
+        "gas_burnt": 4571707640237,
+        "tokens_burnt": 457170764023700000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "6nwdcFercetfLREq9cJDxNLHwe4zbimDKg7NMRgQbvP3",
+      "included_in_block_hash": "HXmcoxpcPYsf6BHiJ7An5Ae5kzcyoXLLosS2xcB38xad",
+      "block_timestamp": "1734297764499770289",
+      "block": {
+        "block_height": 135066051
+      },
+      "receipt_conversion_tokens_burnt": "37662868217000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 457170764023700000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"post\": {\"main\": \"{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"md\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"text\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"We have just received a new *Bounty* proposal.\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**By**: @nneoma.near\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**Title**: \\\\\\\\u{201c}Summary of Work Activities: Hackbox Product Manager (November 20 - December 20)\\\\\\\\u{201c}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**Summary**:\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\nA summary of all completed work activities between the specified date range and all planned work for the next pay period.\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\nRead the full proposal and share your feedback on [DevHub](/events-committee.near/widget/app?page=proposal&id=165)\\\\\\\\\\\\\\\"}\"}, \"index\": {\"post\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"main\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"md\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.7249131290207e+21
+      }
+    },
+    {
+      "id": "11350388845",
+      "receipt_id": "izsvTcGR6QqsXLZqsKu8EmuKui1xUzQjV55KBGBT1SH",
+      "predecessor_account_id": "nneoma.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "BTbeHcwDGdAPKgp4kJTXw2bTZ46Y6w28Vx5Yfh8wBsjT",
+        "block_height": 135066052,
+        "block_timestamp": 1734297765474862800
+      },
+      "receipt_outcome": {
+        "gas_burnt": 5711487093688,
+        "tokens_burnt": 571148709368800000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "6nwdcFercetfLREq9cJDxNLHwe4zbimDKg7NMRgQbvP3",
+      "included_in_block_hash": "HXmcoxpcPYsf6BHiJ7An5Ae5kzcyoXLLosS2xcB38xad",
+      "block_timestamp": "1734297764499770289",
+      "block": {
+        "block_height": 135066051
+      },
+      "receipt_conversion_tokens_burnt": "37662868217000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "add_proposal",
+        "deposit": 0,
+        "fee": 571148709368800000000,
+        "args": "{\"body\": {\"name\": \"Summary of Work Activities: Hackbox Product Manager (November 20 - December 20)\", \"summary\": \"A summary of all completed work activities between the specified date range and all planned work for the next pay period.\", \"category\": \"Bounty\", \"timeline\": {\"status\": \"DRAFT\"}, \"supervisor\": \"yarotska.near\", \"description\": \"- Supported the process of bounty and travel stipend delivery for all [REDACTED] hackathon winners and participants\\\\\\\\n- Contributed to [REDACTED] retrospectives\\\\\\\\n- Supplied a comprehensive database of new repositiories generated from DevHub-sponsored hackathons to Electric Capital for the 2024 Developer Report\\\\\\\\n- Wrote the Hackbox EOY report summarizing key metrics, achievements, collaborations, and forward-looking plans.\\\\\\\\n- Strategic planning around Hackbox V2 for 2025, roadmap development, leads mapping, and content planning\\\\\\\\n- Hackbox official website explorations and copywriting\\\\\\\\n- Attended weekly syncs for Events Working Group \\\\\\\\n\\\\\\\\n#### Timeline\\\\\\\\nStart: November 20 2024\\\\\\\\nEnd date: December 20 2024\\\\\\\\nTotal hours per week: 45\\\\\\\\nTotal hours: 180\\\\\\\\nHourly rate: $50/hr\\\\\\\\nTotal: $9000\", \"linked_proposals\": [], \"receiver_account\": \"nneoma.near\", \"requested_sponsor\": \"events-committee.near\", \"proposal_body_version\": \"V0\", \"requested_sponsorship_usd_amount\": \"9000\", \"requested_sponsorship_paid_in_currency\": \"USDC\"}, \"labels\": [\"Event sponsorship\", \"Hackbox\"], \"accepted_terms_and_conditions_version\": 135066015}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.7249131290207e+21
+      }
+    },
+    {
+      "id": "11271376248",
+      "receipt_id": "F3tQUDQa1APowJgPkQvfrQhmRZFyifyNKUWXPB57eeby",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "Hf3exEr5Xyctv1LVQWT5UF6C2nsr3ctk6XZXsPp77Yf8",
+        "block_height": 134921007,
+        "block_timestamp": 1734132028142588000
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3585905808281,
+        "tokens_burnt": 358590580828100000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "3fNZ2BG81yn1tjYb2Qo4QBTtv6HiupTiG9CDjDVGeBMu",
+      "included_in_block_hash": "J1tBWoC14r7kDKLk2yWVEvHQJBxLfRhQPgYkBhLR3axt",
+      "block_timestamp": "1734132026220952830",
+      "block": {
+        "block_height": 134921005
+      },
+      "receipt_conversion_tokens_burnt": "31711940585000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 358590580828100000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"audreychenmoney.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/edit\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":164,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"audreychenmoney.near\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 782428375167100000000
+      }
+    },
+    {
+      "id": "11271376072",
+      "receipt_id": "5XHyVJq6VQKJd2ZBCi5SFfCZQqqhVQLhYvKZTS5dnfjP",
+      "predecessor_account_id": "audreychenmoney.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "8Vp56HhBWNcao8FsvaKViEgQW2x1VDpwjBsVYNXeuJ2q",
+        "block_height": 134921006,
+        "block_timestamp": 1734132027108584000
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3921258537540,
+        "tokens_burnt": 392125853754000000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "3fNZ2BG81yn1tjYb2Qo4QBTtv6HiupTiG9CDjDVGeBMu",
+      "included_in_block_hash": "J1tBWoC14r7kDKLk2yWVEvHQJBxLfRhQPgYkBhLR3axt",
+      "block_timestamp": "1734132026220952830",
+      "block": {
+        "block_height": 134921005
+      },
+      "receipt_conversion_tokens_burnt": "31711940585000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "edit_proposal_versioned_timeline",
+        "deposit": 0,
+        "fee": 392125853754000000000,
+        "args": "{\"id\": 164, \"timeline\": {\"status\": \"REVIEW\", \"kyc_verified\": false, \"timeline_version\": \"V1\", \"sponsor_requested_review\": false, \"reviewer_completed_attestation\": false}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 782428375167100000000
+      }
+    },
+    {
+      "id": "11271354867",
+      "receipt_id": "83W5PFZjiYVt29htkemB6WSXmALfv22m5C5Pee3P66Mg",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "6cCNLJ6LDRgPNRZWTBn3MgUEoNNbBzxGvjdsKZvydL9h",
+        "block_height": 134920933,
+        "block_timestamp": 1734131948252565200
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3531304060261,
+        "tokens_burnt": 353130406026100000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "EDkFTNvrzhQ6MALsX861SGoGyBpCG7vVcyTVRnJuXSxL",
+      "included_in_block_hash": "HMCFX2wNurgDYnaUJPoZRp5vwfbcbd6Ctf5kSUXMJfTC",
+      "block_timestamp": "1734131946129423313",
+      "block": {
+        "block_height": 134920931
+      },
+      "receipt_conversion_tokens_burnt": "35893802390500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 353130406026100000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"[{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/mention\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":164,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"audreychenmoney.near\\\\\\\\\\\\\\\"}}]\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.6802177055275e+21
+      }
+    },
+    {
+      "id": "11271354864",
+      "receipt_id": "5ZWfXBRapUND8jACHFaBthvSR6CRhBy5B7yQH8a6DQ2G",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "6cCNLJ6LDRgPNRZWTBn3MgUEoNNbBzxGvjdsKZvydL9h",
+        "block_height": 134920933,
+        "block_timestamp": 1734131948252565200
+      },
+      "receipt_outcome": {
+        "gas_burnt": 2952010398675,
+        "tokens_burnt": 295201039867500000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "EDkFTNvrzhQ6MALsX861SGoGyBpCG7vVcyTVRnJuXSxL",
+      "included_in_block_hash": "HMCFX2wNurgDYnaUJPoZRp5vwfbcbd6Ctf5kSUXMJfTC",
+      "block_timestamp": "1734131946129423313",
+      "block": {
+        "block_height": 134920931
+      },
+      "receipt_conversion_tokens_burnt": "35893802390500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set_block_height_callback",
+        "deposit": 0,
+        "fee": 295201039867500000000,
+        "args": "{\"proposal\": {\"id\": 164, \"snapshot\": {\"name\": \"Travel Stipend - Audrey: 21x Hackathon Winner - Near 1st Place HawkHacks Winner\", \"labels\": [\"Travel expenses\"], \"summary\": \"My name is Audrey Chen. I\\\\\\\\\\\\'m seeking a $1600 scholarship to compete in the bangkok redacted hackathon. https://taikai.network/hackbox/hackathons/hawkhacks/projects/clwd5jpln0db7yg01uzwhs3i1/idea I want to build a multimodal multiagent ai application with deep learning to address social good issues.\", \"category\": \"Bounty\", \"timeline\": {\"status\": \"DRAFT\"}, \"editor_id\": \"audreychenmoney.near\", \"timestamp\": \"1734131947214116829\", \"supervisor\": null, \"description\": \"here\\\\\\\\\\\\'s my travel itinerary - I reuploaded the proposal to be approved! ![https://ipfs.near.social/ipfs/bafkreicefhdjfhghyc7pabonpk2rvoet3bsec4ke326haqnj2kgptn6vdi](https://ipfs.near.social/ipfs/bafkreicefhdjfhghyc7pabonpk2rvoet3bsec4ke326haqnj2kgptn6vdi)\", \"linked_proposals\": [], \"receiver_account\": \"audreychenmoney.near\", \"requested_sponsor\": \"events-committee.near\", \"proposal_body_version\": \"V0\", \"requested_sponsorship_usd_amount\": \"1600\", \"requested_sponsorship_paid_in_currency\": \"USDT\"}, \"author_id\": \"audreychenmoney.near\", \"snapshot_history\": [], \"social_db_post_block_height\": \"0\"}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.6802177055275e+21
+      }
+    },
+    {
+      "id": "11271354857",
+      "receipt_id": "69LeFPSndGtGRAVD1oMzcgrbHmnsJVQDbAM1by4Ef8UB",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "6cCNLJ6LDRgPNRZWTBn3MgUEoNNbBzxGvjdsKZvydL9h",
+        "block_height": 134920933,
+        "block_timestamp": 1734131948252565200
+      },
+      "receipt_outcome": {
+        "gas_burnt": 4603825148056,
+        "tokens_burnt": 460382514805600000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "EDkFTNvrzhQ6MALsX861SGoGyBpCG7vVcyTVRnJuXSxL",
+      "included_in_block_hash": "HMCFX2wNurgDYnaUJPoZRp5vwfbcbd6Ctf5kSUXMJfTC",
+      "block_timestamp": "1734131946129423313",
+      "block": {
+        "block_height": 134920931
+      },
+      "receipt_conversion_tokens_burnt": "35893802390500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 460382514805600000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"post\": {\"main\": \"{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"md\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"text\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"We have just received a new *Bounty* proposal.\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**By**: @audreychenmoney.near\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**Title**: \\\\\\\\u{201c}Travel Stipend - Audrey: 21x Hackathon Winner - Near 1st Place HawkHacks Winner\\\\\\\\u{201c}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**Summary**:\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\nMy name is Audrey Chen. I\\\\\\\\\\\\'m seeking a $1600 scholarship to compete in the bangkok redacted hackathon. https://taikai.network/hackbox/hackathons/hawkhacks/projects/clwd5jpln0db7yg01uzwhs3i1/idea I want to build a multimodal multiagent ai application with deep learning to address social good issues.\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\nRead the full proposal and share your feedback on [DevHub](/events-committee.near/widget/app?page=proposal&id=164)\\\\\\\\\\\\\\\"}\"}, \"index\": {\"post\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"main\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"md\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.6802177055275e+21
+      }
+    },
+    {
+      "id": "11271354510",
+      "receipt_id": "eeZD9i1LGaCXz5wB7P4nybgH3LvV1dBnrkD2ADVfKbh",
+      "predecessor_account_id": "audreychenmoney.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "GxAaTam29ZAN23KHb2CiqYPg29kuiwzNQUXwe1QRPwLy",
+        "block_height": 134920932,
+        "block_timestamp": 1734131947214116900
+      },
+      "receipt_outcome": {
+        "gas_burnt": 5356099424378,
+        "tokens_burnt": 535609942437800000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "EDkFTNvrzhQ6MALsX861SGoGyBpCG7vVcyTVRnJuXSxL",
+      "included_in_block_hash": "HMCFX2wNurgDYnaUJPoZRp5vwfbcbd6Ctf5kSUXMJfTC",
+      "block_timestamp": "1734131946129423313",
+      "block": {
+        "block_height": 134920931
+      },
+      "receipt_conversion_tokens_burnt": "35893802390500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "add_proposal",
+        "deposit": 0,
+        "fee": 535609942437800000000,
+        "args": "{\"body\": {\"name\": \"Travel Stipend - Audrey: 21x Hackathon Winner - Near 1st Place HawkHacks Winner\", \"summary\": \"My name is Audrey Chen. I\\\\\\\\\\\\'m seeking a $1600 scholarship to compete in the bangkok redacted hackathon. https://taikai.network/hackbox/hackathons/hawkhacks/projects/clwd5jpln0db7yg01uzwhs3i1/idea I want to build a multimodal multiagent ai application with deep learning to address social good issues.\", \"category\": \"Bounty\", \"timeline\": {\"status\": \"DRAFT\"}, \"supervisor\": null, \"description\": \"here\\\\\\\\\\\\'s my travel itinerary - I reuploaded the proposal to be approved! ![https://ipfs.near.social/ipfs/bafkreicefhdjfhghyc7pabonpk2rvoet3bsec4ke326haqnj2kgptn6vdi](https://ipfs.near.social/ipfs/bafkreicefhdjfhghyc7pabonpk2rvoet3bsec4ke326haqnj2kgptn6vdi)\", \"linked_proposals\": [], \"receiver_account\": \"audreychenmoney.near\", \"requested_sponsor\": \"events-committee.near\", \"proposal_body_version\": \"V0\", \"requested_sponsorship_usd_amount\": \"1600\", \"requested_sponsorship_paid_in_currency\": \"USDT\"}, \"labels\": [\"Travel expenses\"], \"accepted_terms_and_conditions_version\": 134920904}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.6802177055275e+21
+      }
+    },
+    {
+      "id": "11253091869",
+      "receipt_id": "HwQwEzt1KCBBhqXN4L6Bc3dVebnzcc9wee976y9Pt3eE",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "5ZnrtaFdsxTQ7WPLAtTZRPvN7JNuo9QGSzdhykE6fiu1",
+        "block_height": 134890307,
+        "block_timestamp": 1734096936443849000
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3513462140727,
+        "tokens_burnt": 351346214072700000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "78swJobEJdwGNqswYg1YZPWMGhtqYqTynE2UsELvqcc8",
+      "included_in_block_hash": "Fzs73nKEJ1muA1BwW2gZPfurGqq9sb2xd5wwjpq6hCXi",
+      "block_timestamp": "1734096934191299406",
+      "block": {
+        "block_height": 134890305
+      },
+      "receipt_conversion_tokens_burnt": "31711940585000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 351346214072700000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"shawn-seahorse.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/edit\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":163,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"shawn-seahorse.near\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 913570084063600000000
+      }
+    },
+    {
+      "id": "11253091637",
+      "receipt_id": "R2S1KZ8meQVC4b2dv8KJeCLixQbR8AeLygFFkfSLZdC",
+      "predecessor_account_id": "shawn-seahorse.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "849nPQrUzHvGVGCotyQVHCDDYEC26aHhvac8HVAKJjA",
+        "block_height": 134890306,
+        "block_timestamp": 1734096935290824200
+      },
+      "receipt_outcome": {
+        "gas_burnt": 5305119294059,
+        "tokens_burnt": 530511929405900000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "78swJobEJdwGNqswYg1YZPWMGhtqYqTynE2UsELvqcc8",
+      "included_in_block_hash": "Fzs73nKEJ1muA1BwW2gZPfurGqq9sb2xd5wwjpq6hCXi",
+      "block_timestamp": "1734096934191299406",
+      "block": {
+        "block_height": 134890305
+      },
+      "receipt_conversion_tokens_burnt": "31711940585000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "edit_proposal_versioned_timeline",
+        "deposit": 0,
+        "fee": 530511929405900000000,
+        "args": "{\"id\": 163, \"timeline\": {\"status\": \"REVIEW\", \"kyc_verified\": false, \"timeline_version\": \"V1\", \"sponsor_requested_review\": false, \"reviewer_completed_attestation\": false}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 913570084063600000000
+      }
+    },
+    {
+      "id": "11253086408",
+      "receipt_id": "36gfwo76QkmEi3vePvhPLhBH4yeLVPZKH1TRXPWquVPy",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "3DzrNUuuQK16pWjmzsT1X9tSFqWAT5WUf82VNnjkY1Lc",
+        "block_height": 134890288,
+        "block_timestamp": 1734096915602338300
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3522051252783,
+        "tokens_burnt": 352205125278300000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "2nxmV43kvixmsdHQLiimtDf9A2RKi1qp3BatYVhiKMsG",
+      "included_in_block_hash": "Ce7iUkfrqnuYcg4Y3UhtTPri7cbj9CfekPhMqvzAfHvm",
+      "block_timestamp": "1734096913301962875",
+      "block": {
+        "block_height": 134890286
+      },
+      "receipt_conversion_tokens_burnt": "65009478769500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 352205125278300000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"[{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"mariamneu.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/mention\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":163,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"shawn-seahorse.near\\\\\\\\\\\\\\\"}},{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/mention\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":163,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"shawn-seahorse.near\\\\\\\\\\\\\\\"}}]\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.914801577752e+21
+      }
+    },
+    {
+      "id": "11253086405",
+      "receipt_id": "AyUQzA3xUyHj4wfvuw5ZTn6cV51PXyFp2NZYCTjLzcNq",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "3DzrNUuuQK16pWjmzsT1X9tSFqWAT5WUf82VNnjkY1Lc",
+        "block_height": 134890288,
+        "block_timestamp": 1734096915602338300
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3580057144319,
+        "tokens_burnt": 358005714431900000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "2nxmV43kvixmsdHQLiimtDf9A2RKi1qp3BatYVhiKMsG",
+      "included_in_block_hash": "Ce7iUkfrqnuYcg4Y3UhtTPri7cbj9CfekPhMqvzAfHvm",
+      "block_timestamp": "1734096913301962875",
+      "block": {
+        "block_height": 134890286
+      },
+      "receipt_conversion_tokens_burnt": "65009478769500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set_block_height_callback",
+        "deposit": 0,
+        "fee": 358005714431900000000,
+        "args": "{\"proposal\": {\"id\": 163, \"snapshot\": {\"name\": \"1st Place Winning project at the REDACTED Hackathon City node Waterloo! \", \"labels\": [\"Bounty\", \"Hackathon\"], \"summary\": \"With Seahorse, we wanted to combat loneliness and enhance mental health through an AI-powered wellness engine that provides personalized support and connects users with a real-life community of like-minded individuals.\\\\\\\\n\\\\\\\\nThis was accomplished by creating online accountability through an AI wellness recommendation engine. This platform guides users in self-care while connecting them in real life to a supportive community of like-minded individuals, fostering in-person accountability and growth.\", \"category\": \"Bounty\", \"timeline\": {\"status\": \"DRAFT\"}, \"editor_id\": \"shawn-seahorse.near\", \"timestamp\": \"1734096914470811976\", \"supervisor\": \"mariamneu.near\", \"description\": \"DEMO LINKS\\\\\\\\nDevpost: https://devpost.com/software/seahorse-social\\\\\\\\nDemo Video: https://seahorse-phi.vercel.app/\\\\\\\\nGitHub: https://github.com/KonferCA/Seahorse\\\\\\\\n\\\\\\\\nWhat it does\\\\\\\\nSeahorse is a decentralized wellness AI with privacy as our core ideology. Here is how it works:\\\\\\\\n\\\\\\\\nDecentralization of Data Sources\\\\\\\\nPrivacy and Control: Reduces dependency on centralized servers, allowing users to retain control over personal data like emails, calendars, and documents.\\\\\\\\nEnhanced Security: Decentralized nodes increase resilience and data security.\\\\\\\\n\\\\\\\\nOpen-Source Language Model Integration\\\\\\\\nTransparency: Enables customizable, transparent models that avoid reliance on third-party, black-box solutions.\\\\\\\\nPrivacy-By-Design: Aligns with privacy-first principles, ensuring model processing occurs securely on-device.\\\\\\\\n\\\\\\\\nBlockchain-Based Compensation with NEAR Protocol\\\\\\\\nAutomated Fair Compensation: Data providers receive payment based on data relevance and usage, fostering transparency and trust.\\\\\\\\nReal-Time Accountability: Tracks data interactions on-chain, ensuring tamper-proof, accountable compensation.\\\\\\\\n\\\\\\\\nUser Privacy and Data Ownership\\\\\\\\nAccess Control: Users retain granular control over shared data (e.g., email, calendar).\\\\\\\\nOn-Device Processing: Minimizes exposure to external systems, enhancing compliance with data privacy regulations.\\\\\\\\nEmpowerment Through Privacy: Privacy-by-design principles encourage user trust by ensuring data ownership and control.\\\\\\\\n\\\\\\\\nEthical AI Development\\\\\\\\nFair Compensation and Data Ownership: Sets a standard for ethical AI by respecting data ownership and fairly compensating providers.\\\\\\\\nUser Privacy and Functionality: Balances AI functionality with strict data privacy, promoting responsible AI use.\\\\\\\\nCheck it out yourself if you don\\\\\\\\\\\\'t believe us! https://github.com/KonferCA/Seahorse\\\\\\\\n\\\\\\\\nScalability and Flexibility\\\\\\\\nModular Design: Accommodates various data sources and modalities, including multimodal capabilities.\\\\\\\\nScalability: Designed to scale with more extensive datasets and data types, increasing versatility.\\\\\\\\n\\\\\\\\nFoundation for Future Innovations\\\\\\\\nDecentralized AI Proof of Concept: Paves the way for future decentralized AI applications centered around data privacy and ownership.\\\\\\\\nOpen Infrastructure Development: Provides a foundation for projects focused on user privacy, data control, and decentralized compute.\\\\\\\\n\\\\\\\\nHow we built it\\\\\\\\nA decentralized Retrieval-Augmented Generation (RAG) system with a blockchain-based compensation model that prioritizes data ownership and privacy. The system processes personal data, such as Google Calendar entries, emails, and transcriptions, entirely on-device using advanced similarity search with all-MiniLM-L6-v2 embeddings. A secure, wallet-based routing system enables two users to exchange decryption keys, allowing access to shared calendar and event data stored encrypted on NEAR Protocol\\\\\\\\u{2019}s blockchain. Compensation for data providers is managed through NEAR smart contracts, which distribute payments based on data relevance scores. Initially centralized for simplicity, the routing system is designed with future decentralization in mind.\\\\\\\\n\\\\\\\\nThis project aims to set new standards in ethical AI by combining privacy-focused, decentralized data processing with a fair, automated compensation structure for data contributors.\\\\\\\\n\\\\\\\\nOn-Device System\\\\\\\\nOn-Device RAG System: An entirely on-device Retrieval-Augmented Generation (RAG) system pulls relevant information from diverse sources.\\\\\\\\nData Sources: Includes Google Calendar, Gmail emails, uploaded documents, voice transcriptions, and more.\\\\\\\\nVector Embeddings: Uses all-MiniLM-L6-v2 model to map text into a dense vector space for similarity searches.\\\\\\\\nFlexibility: Designed for plug-and-play functionality to accommodate new information as needed.\\\\\\\\nResponse Generation: Uses WebLLM to run Phi 3.5 Vision Instruct on-device for responses, pulling only relevant data.\\\\\\\\n\\\\\\\\nSmart Contract Integration: Relevancy scores and data usage are logged for fair compensation calculation. This information is sent to NEAR Protocol, which calculates and distributes payments based on data relevance.\\\\\\\\nVoice Transcription: Uses Web Speech API for on-device transcription, storing notes locally for user retrieval and RAG system reference.\\\\\\\\nSmart Contract System\\\\\\\\nData Management: Data providers manage their information directly on NEAR\\\\\\\\u{2019}s blockchain.\\\\\\\\nDirect Updates: Providers can update, add, or remove data on the blockchain, formatted specifically for the RAG system.\\\\\\\\nCompensation Calculation: Smart contract computes compensation based on data type and relevance scores, immediately distributing NEAR tokens to providers\\\\\\\\u{2019} wallets.\\\\\\\\nEncrypted User Data Storage: Stores user information (calendar, documents, etc.) in encrypted form. Decryption occurs solely on-device, enabling private data sharing within the RAG system.\\\\\\\\nShared Events: Includes multi-user interactions like shared calendar events, enabling better decision-making between parties.\\\\\\\\n\\\\\\\\nSecure Routing System for Key Exchange\\\\\\\\nAllows two users to establish a secure key exchange to decrypt calendar or event data stored on the NEAR blockchain.\\\\\\\\n\\\\\\\\nMechanism:\\\\\\\\n- NEAR Wallet-Based Identification: Each user is identified by their NEAR wallet, establishing a unique route for connection.\\\\\\\\n- Key Exchange: Users initiate a key exchange over a secure, temporary routing channel that connects their wallets. Once exchanged, each user holds a key to access shared calendar or event data.\\\\\\\\n- Encrypted Storage and Access: After the key exchange, calendar or event data stored on-chain remains encrypted. Only the involved users, who possess the corresponding keys, can decrypt the shared data on-device.\\\\\\\\n\\\\\\\\nCentralized Routing with Future Decentralization Potential:\\\\\\\\n- Current Setup: The routing system is centrally managed to streamline initial development, with key exchanges handled through secure server channels linked to NEAR wallets.\\\\\\\\n- Decentralization Plan: In future iterations, the routing can transition to decentralized protocols (e.g., peer-to-peer or DHT-based systems), allowing users to securely exchange keys without centralized routing.\", \"linked_proposals\": [], \"receiver_account\": \"shawn-seahorse.near\", \"requested_sponsor\": \"events-committee.near\", \"proposal_body_version\": \"V0\", \"requested_sponsorship_usd_amount\": \"1000\", \"requested_sponsorship_paid_in_currency\": \"USDC\"}, \"author_id\": \"shawn-seahorse.near\", \"snapshot_history\": [], \"social_db_post_block_height\": \"0\"}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.914801577752e+21
+      }
+    },
+    {
+      "id": "11253086398",
+      "receipt_id": "4m4C1qv9DC7m2wTaDPfQgzB5wtmFWRJfq7tNASs66vAN",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "3DzrNUuuQK16pWjmzsT1X9tSFqWAT5WUf82VNnjkY1Lc",
+        "block_height": 134890288,
+        "block_timestamp": 1734096915602338300
+      },
+      "receipt_outcome": {
+        "gas_burnt": 4596566534492,
+        "tokens_burnt": 459656653449200000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "2nxmV43kvixmsdHQLiimtDf9A2RKi1qp3BatYVhiKMsG",
+      "included_in_block_hash": "Ce7iUkfrqnuYcg4Y3UhtTPri7cbj9CfekPhMqvzAfHvm",
+      "block_timestamp": "1734096913301962875",
+      "block": {
+        "block_height": 134890286
+      },
+      "receipt_conversion_tokens_burnt": "65009478769500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 459656653449200000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"post\": {\"main\": \"{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"md\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"text\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"We have just received a new *Bounty* proposal.\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**By**: @shawn-seahorse.near\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**Title**: \\\\\\\\u{201c}1st Place Winning project at the REDACTED Hackathon City node Waterloo! \\\\\\\\u{201c}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n**Summary**:\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\nWith Seahorse, we wanted to combat loneliness and enhance mental health through an AI-powered wellness engine that provides personalized support and connects users with a real-life community of like-minded individuals.\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\nThis was accomplished by creating online accountability through an AI wellness recommendation engine. This platform guides users in self-care while connecting them in real life to a supportive community of like-minded individuals, fostering in-person accountability and growth.\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\n\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\u{2014}\\\\\\\\\\\\\\\\n\\\\\\\\\\\\\\\\nRead the full proposal and share your feedback on [DevHub](/events-committee.near/widget/app?page=proposal&id=163)\\\\\\\\\\\\\\\"}\"}, \"index\": {\"post\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"main\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"md\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.914801577752e+21
+      }
+    },
+    {
+      "id": "11253086224",
+      "receipt_id": "CSh28FUsqtxTWSpPsSHwDZWhooDVgZMZb2pDpvUNcjtE",
+      "predecessor_account_id": "shawn-seahorse.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "HZGutWdrU6S7wCXbEcGKbaEQUPMd6xHSmbfv6UE2sz1j",
+        "block_height": 134890287,
+        "block_timestamp": 1734096914470812000
+      },
+      "receipt_outcome": {
+        "gas_burnt": 6799246058231,
+        "tokens_burnt": 679924605823100000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "2nxmV43kvixmsdHQLiimtDf9A2RKi1qp3BatYVhiKMsG",
+      "included_in_block_hash": "Ce7iUkfrqnuYcg4Y3UhtTPri7cbj9CfekPhMqvzAfHvm",
+      "block_timestamp": "1734096913301962875",
+      "block": {
+        "block_height": 134890286
+      },
+      "receipt_conversion_tokens_burnt": "65009478769500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "add_proposal",
+        "deposit": 0,
+        "fee": 679924605823100000000,
+        "args": "{\"body\": {\"name\": \"1st Place Winning project at the REDACTED Hackathon City node Waterloo! \", \"summary\": \"With Seahorse, we wanted to combat loneliness and enhance mental health through an AI-powered wellness engine that provides personalized support and connects users with a real-life community of like-minded individuals.\\\\\\\\n\\\\\\\\nThis was accomplished by creating online accountability through an AI wellness recommendation engine. This platform guides users in self-care while connecting them in real life to a supportive community of like-minded individuals, fostering in-person accountability and growth.\", \"category\": \"Bounty\", \"timeline\": {\"status\": \"DRAFT\"}, \"supervisor\": \"mariamneu.near\", \"description\": \"DEMO LINKS\\\\\\\\nDevpost: https://devpost.com/software/seahorse-social\\\\\\\\nDemo Video: https://seahorse-phi.vercel.app/\\\\\\\\nGitHub: https://github.com/KonferCA/Seahorse\\\\\\\\n\\\\\\\\nWhat it does\\\\\\\\nSeahorse is a decentralized wellness AI with privacy as our core ideology. Here is how it works:\\\\\\\\n\\\\\\\\nDecentralization of Data Sources\\\\\\\\nPrivacy and Control: Reduces dependency on centralized servers, allowing users to retain control over personal data like emails, calendars, and documents.\\\\\\\\nEnhanced Security: Decentralized nodes increase resilience and data security.\\\\\\\\n\\\\\\\\nOpen-Source Language Model Integration\\\\\\\\nTransparency: Enables customizable, transparent models that avoid reliance on third-party, black-box solutions.\\\\\\\\nPrivacy-By-Design: Aligns with privacy-first principles, ensuring model processing occurs securely on-device.\\\\\\\\n\\\\\\\\nBlockchain-Based Compensation with NEAR Protocol\\\\\\\\nAutomated Fair Compensation: Data providers receive payment based on data relevance and usage, fostering transparency and trust.\\\\\\\\nReal-Time Accountability: Tracks data interactions on-chain, ensuring tamper-proof, accountable compensation.\\\\\\\\n\\\\\\\\nUser Privacy and Data Ownership\\\\\\\\nAccess Control: Users retain granular control over shared data (e.g., email, calendar).\\\\\\\\nOn-Device Processing: Minimizes exposure to external systems, enhancing compliance with data privacy regulations.\\\\\\\\nEmpowerment Through Privacy: Privacy-by-design principles encourage user trust by ensuring data ownership and control.\\\\\\\\n\\\\\\\\nEthical AI Development\\\\\\\\nFair Compensation and Data Ownership: Sets a standard for ethical AI by respecting data ownership and fairly compensating providers.\\\\\\\\nUser Privacy and Functionality: Balances AI functionality with strict data privacy, promoting responsible AI use.\\\\\\\\nCheck it out yourself if you don\\\\\\\\\\\\'t believe us! https://github.com/KonferCA/Seahorse\\\\\\\\n\\\\\\\\nScalability and Flexibility\\\\\\\\nModular Design: Accommodates various data sources and modalities, including multimodal capabilities.\\\\\\\\nScalability: Designed to scale with more extensive datasets and data types, increasing versatility.\\\\\\\\n\\\\\\\\nFoundation for Future Innovations\\\\\\\\nDecentralized AI Proof of Concept: Paves the way for future decentralized AI applications centered around data privacy and ownership.\\\\\\\\nOpen Infrastructure Development: Provides a foundation for projects focused on user privacy, data control, and decentralized compute.\\\\\\\\n\\\\\\\\nHow we built it\\\\\\\\nA decentralized Retrieval-Augmented Generation (RAG) system with a blockchain-based compensation model that prioritizes data ownership and privacy. The system processes personal data, such as Google Calendar entries, emails, and transcriptions, entirely on-device using advanced similarity search with all-MiniLM-L6-v2 embeddings. A secure, wallet-based routing system enables two users to exchange decryption keys, allowing access to shared calendar and event data stored encrypted on NEAR Protocol\\\\\\\\u{2019}s blockchain. Compensation for data providers is managed through NEAR smart contracts, which distribute payments based on data relevance scores. Initially centralized for simplicity, the routing system is designed with future decentralization in mind.\\\\\\\\n\\\\\\\\nThis project aims to set new standards in ethical AI by combining privacy-focused, decentralized data processing with a fair, automated compensation structure for data contributors.\\\\\\\\n\\\\\\\\nOn-Device System\\\\\\\\nOn-Device RAG System: An entirely on-device Retrieval-Augmented Generation (RAG) system pulls relevant information from diverse sources.\\\\\\\\nData Sources: Includes Google Calendar, Gmail emails, uploaded documents, voice transcriptions, and more.\\\\\\\\nVector Embeddings: Uses all-MiniLM-L6-v2 model to map text into a dense vector space for similarity searches.\\\\\\\\nFlexibility: Designed for plug-and-play functionality to accommodate new information as needed.\\\\\\\\nResponse Generation: Uses WebLLM to run Phi 3.5 Vision Instruct on-device for responses, pulling only relevant data.\\\\\\\\n\\\\\\\\nSmart Contract Integration: Relevancy scores and data usage are logged for fair compensation calculation. This information is sent to NEAR Protocol, which calculates and distributes payments based on data relevance.\\\\\\\\nVoice Transcription: Uses Web Speech API for on-device transcription, storing notes locally for user retrieval and RAG system reference.\\\\\\\\nSmart Contract System\\\\\\\\nData Management: Data providers manage their information directly on NEAR\\\\\\\\u{2019}s blockchain.\\\\\\\\nDirect Updates: Providers can update, add, or remove data on the blockchain, formatted specifically for the RAG system.\\\\\\\\nCompensation Calculation: Smart contract computes compensation based on data type and relevance scores, immediately distributing NEAR tokens to providers\\\\\\\\u{2019} wallets.\\\\\\\\nEncrypted User Data Storage: Stores user information (calendar, documents, etc.) in encrypted form. Decryption occurs solely on-device, enabling private data sharing within the RAG system.\\\\\\\\nShared Events: Includes multi-user interactions like shared calendar events, enabling better decision-making between parties.\\\\\\\\n\\\\\\\\nSecure Routing System for Key Exchange\\\\\\\\nAllows two users to establish a secure key exchange to decrypt calendar or event data stored on the NEAR blockchain.\\\\\\\\n\\\\\\\\nMechanism:\\\\\\\\n- NEAR Wallet-Based Identification: Each user is identified by their NEAR wallet, establishing a unique route for connection.\\\\\\\\n- Key Exchange: Users initiate a key exchange over a secure, temporary routing channel that connects their wallets. Once exchanged, each user holds a key to access shared calendar or event data.\\\\\\\\n- Encrypted Storage and Access: After the key exchange, calendar or event data stored on-chain remains encrypted. Only the involved users, who possess the corresponding keys, can decrypt the shared data on-device.\\\\\\\\n\\\\\\\\nCentralized Routing with Future Decentralization Potential:\\\\\\\\n- Current Setup: The routing system is centrally managed to streamline initial development, with key exchanges handled through secure server channels linked to NEAR wallets.\\\\\\\\n- Decentralization Plan: In future iterations, the routing can transition to decentralized protocols (e.g., peer-to-peer or DHT-based systems), allowing users to securely exchange keys without centralized routing.\", \"linked_proposals\": [], \"receiver_account\": \"shawn-seahorse.near\", \"requested_sponsor\": \"events-committee.near\", \"proposal_body_version\": \"V0\", \"requested_sponsorship_usd_amount\": \"1000\", \"requested_sponsorship_paid_in_currency\": \"USDC\"}, \"labels\": [\"Hackathon\", \"Bounty\"], \"accepted_terms_and_conditions_version\": 134890201}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 1.914801577752e+21
+      }
+    },
+    {
+      "id": "11249628437",
+      "receipt_id": "3jRaXLLGHegw5UyNMtpr9tdm7frffByJJJu4MixLUxVZ",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "CceVviZyYc9qzytD7a5L2cLWfMbzv5yagjirgwM4xZhX",
+        "block_height": 134884194,
+        "block_timestamp": 1734089996301433000
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3529279258187,
+        "tokens_burnt": 352927925818700000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "HpWVSpWYTJg4yUhoqQW87ZRWKQ77mMw1tYEUWEqJmUEb",
+      "included_in_block_hash": "QuDkgWcwv2TzEcjvt3hRCL24GndNXWkLxSrRik1rzp1",
+      "block_timestamp": "1734089994059590633",
+      "block": {
+        "block_height": 134884192
+      },
+      "receipt_conversion_tokens_burnt": "32074336819000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 352927925818700000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"heywilliamwang.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/edit\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":139,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"yarotska.near\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 916326665433000000000
+      }
+    },
+    {
+      "id": "11249628287",
+      "receipt_id": "3kN8CKWMY2dENikENmAkJb1mbZNEfipq6ovs3QubqdPq",
+      "predecessor_account_id": "yarotska.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "DRhdoh9X8bfpoLFmQuw9u6moT9dVSRkWpVAhN2r7NMLs",
+        "block_height": 134884193,
+        "block_timestamp": 1734089995259902700
+      },
+      "receipt_outcome": {
+        "gas_burnt": 5313244027953,
+        "tokens_burnt": 531324402795300000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "HpWVSpWYTJg4yUhoqQW87ZRWKQ77mMw1tYEUWEqJmUEb",
+      "included_in_block_hash": "QuDkgWcwv2TzEcjvt3hRCL24GndNXWkLxSrRik1rzp1",
+      "block_timestamp": "1734089994059590633",
+      "block": {
+        "block_height": 134884192
+      },
+      "receipt_conversion_tokens_burnt": "32074336819000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "edit_proposal_versioned_timeline",
+        "deposit": 0,
+        "fee": 531324402795300000000,
+        "args": "{\"id\": 139, \"timeline\": {\"status\": \"PAYMENT_PROCESSING\", \"kyc_verified\": true, \"timeline_version\": \"V1\", \"test_transaction_sent\": true, \"sponsor_requested_review\": true, \"request_for_trustees_created\": false, \"reviewer_completed_attestation\": false}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 916326665433000000000
+      }
+    },
+    {
+      "id": "11249621897",
+      "receipt_id": "5YtTeFi3YFjWNv8cGC2CyhSdzVPAwQHnbUbzgQnWJ1My",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "GRtywX2uf2Np5czNrQ9qhk4oNKsaKJSgnWkeddCqzfTn",
+        "block_height": 134884168,
+        "block_timestamp": 1734089967806103800
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3529279258187,
+        "tokens_burnt": 352927925818700000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "989LeqUQK3kB9byAyCXX7h4gE471xtpmFdG6u3XkYu57",
+      "included_in_block_hash": "BpXHPkWoxma9UctV4LgYm4kqYAuEHcppsKk6bgSRi1p5",
+      "block_timestamp": "1734089965826904248",
+      "block": {
+        "block_height": 134884166
+      },
+      "receipt_conversion_tokens_burnt": "40242557198500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 352927925818700000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"heywilliamwang.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/edit\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":139,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"yarotska.near\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 869723566383300000000
+      }
+    },
+    {
+      "id": "11249621849",
+      "receipt_id": "9BdrrxBQzPemm2TPw7bSFeWDf458k1mJCX74uA3Nc6zW",
+      "predecessor_account_id": "yarotska.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "8f4hV7xrdaFcnJjzoSXTNewpRkjXB88G9y16xkTJvKwH",
+        "block_height": 134884167,
+        "block_timestamp": 1734089966739191300
+      },
+      "receipt_outcome": {
+        "gas_burnt": 4765530833661,
+        "tokens_burnt": 476553083366100000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "989LeqUQK3kB9byAyCXX7h4gE471xtpmFdG6u3XkYu57",
+      "included_in_block_hash": "BpXHPkWoxma9UctV4LgYm4kqYAuEHcppsKk6bgSRi1p5",
+      "block_timestamp": "1734089965826904248",
+      "block": {
+        "block_height": 134884166
+      },
+      "receipt_conversion_tokens_burnt": "40242557198500000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "edit_proposal",
+        "deposit": 0,
+        "fee": 476553083366100000000,
+        "args": "{\"id\": 139, \"body\": {\"name\": \"[REDACTED] Waterloo City Node 2nd Winner |Near Go| Pre-approved Travel Stipend \", \"summary\": \"Hi Near team, my project \\\\\\\\\\\\\\\"Near Go\\\\\\\\\\\\\\\" won 2nd place at [REDACTED] Waterloo City Node! Tweet link: https://x.com/NEAR_Toronto/status/1858873916959416722\\\\\\\\n\\\\\\\\nI was told there are Pre-approved \\\\\\\\\\\\\\\"Travel Stipends available for top 3 teams of the Waterloo Node\\\\\\\\\\\\\\\" and to submit a proposal!\\\\\\\\n\\\\\\\\nAttached below are as requested:\\\\\\\\n1. My airplane tickets\\\\\\\\n2. Hotel Booking\\\\\\\\n3. My Redacted Ticket\", \"category\": \"Bounty\", \"timeline\": {\"status\": \"APPROVED\", \"kyc_verified\": true, \"timeline_version\": \"V1\", \"sponsor_requested_review\": true, \"reviewer_completed_attestation\": false}, \"supervisor\": \"yarotska.near\", \"description\": \"Hi Near team, my project \\\\\\\\\\\\\\\"Near Go\\\\\\\\\\\\\\\" won 2nd place at [REDACTED] Waterloo City Node! Tweet link: https://x.com/NEAR_Toronto/status/1858873916959416722\\\\\\\\n\\\\\\\\nI was told there are Pre-approved \\\\\\\\\\\\\\\"Travel Stipends available for top 3 teams of the Waterloo Node\\\\\\\\\\\\\\\" and to submit a proposal!\\\\\\\\n\\\\\\\\nAttached below are as requested:\\\\\\\\n1. My airplane tickets\\\\\\\\n2. Hotel Booking\\\\\\\\n3. My Redacted Ticket\\\\\\\\n\\\\\\\\nFlights: ![https://ipfs.near.social/ipfs/bafkreiddi2mlppfcpay7572l6qugwp3kmlubx2ojvsztu4k3uaymen6zoe](https://ipfs.near.social/ipfs/bafkreiddi2mlppfcpay7572l6qugwp3kmlubx2ojvsztu4k3uaymen6zoe)\\\\\\\\n\\\\\\\\nHotel Booking: ![https://ipfs.near.social/ipfs/bafkreie54zug2qzplqka3fddsiya6ykl34aam5c5tsrc35n6tpoybk3pxa](https://ipfs.near.social/ipfs/bafkreie54zug2qzplqka3fddsiya6ykl34aam5c5tsrc35n6tpoybk3pxa)\\\\\\\\n\\\\\\\\nRedacted Ticket: ![https://ipfs.near.social/ipfs/bafkreibxla5kkqhshsnc667ufcxaw2i74goc25lw53p4wujqsnmbf7aav4](https://ipfs.near.social/ipfs/bafkreibxla5kkqhshsnc667ufcxaw2i74goc25lw53p4wujqsnmbf7aav4)\", \"linked_proposals\": [], \"receiver_account\": \"heywilliamwang.near\", \"requested_sponsor\": \"events-committee.near\", \"proposal_body_version\": \"V0\", \"requested_sponsorship_usd_amount\": \"1000\", \"requested_sponsorship_paid_in_currency\": \"USDC\"}, \"labels\": [\"Hackathon\", \"Travel expenses\"]}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 869723566383300000000
+      }
+    },
+    {
+      "id": "11249603062",
+      "receipt_id": "2B7jQWHioQHx58r9CCVLZTeD3ynU99oJYMTV8BnCVmev",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "AbiyHBtKkQTQrUNuQeEgmgUURffH4HUcvDH1skzWW1vY",
+        "block_height": 134884141,
+        "block_timestamp": 1734089937980324400
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3584567081891,
+        "tokens_burnt": 358456708189100000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "xnG5vAfCceevYzEvsqq6GS8NS4NQgJY7pkAWtgaWw8A",
+      "included_in_block_hash": "CivKD4MnjXigNgHMSnjg9WQAsrEYyMCS31RdA518zjuv",
+      "block_timestamp": "1734089935545457421",
+      "block": {
+        "block_height": 134884139
+      },
+      "receipt_conversion_tokens_burnt": "31702403842000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 358456708189100000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"heywilliamwang.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/edit\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":139,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"yarotska.near\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 857153600114400000000
+      }
+    },
+    {
+      "id": "11249602489",
+      "receipt_id": "AhKwC9vHg3ZxXTLbM8nL6y9VzQyWhTqrKvmv2iDVtJCJ",
+      "predecessor_account_id": "yarotska.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "EdCK8pXN9x62yKF5CJuX7EjoTeTMzCNuCnwv9td6Zqoy",
+        "block_height": 134884140,
+        "block_timestamp": 1734089936765887700
+      },
+      "receipt_outcome": {
+        "gas_burnt": 4669944880833,
+        "tokens_burnt": 466994488083300000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "xnG5vAfCceevYzEvsqq6GS8NS4NQgJY7pkAWtgaWw8A",
+      "included_in_block_hash": "CivKD4MnjXigNgHMSnjg9WQAsrEYyMCS31RdA518zjuv",
+      "block_timestamp": "1734089935545457421",
+      "block": {
+        "block_height": 134884139
+      },
+      "receipt_conversion_tokens_burnt": "31702403842000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "edit_proposal_versioned_timeline",
+        "deposit": 0,
+        "fee": 466994488083300000000,
+        "args": "{\"id\": 139, \"timeline\": {\"status\": \"REVIEW\", \"kyc_verified\": true, \"timeline_version\": \"V1\", \"sponsor_requested_review\": true, \"reviewer_completed_attestation\": false}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 857153600114400000000
+      }
+    },
+    {
+      "id": "11249499438",
+      "receipt_id": "7Bexh8uZQkGBgk862g9VsGL9BdUzzrDTJiq8qRMGQvsb",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "12bHgsYVaZojYRvx3L5YFR6CnyqywoNyb5tsQk4deyZ",
+        "block_height": 134883979,
+        "block_timestamp": 1734089759528590300
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3501635346335,
+        "tokens_burnt": 350163534633500000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "B8Qvue8unGYY3YiCawapANB56iaqJvMJEk6aV21qhQMU",
+      "included_in_block_hash": "BJxrzZQ1RmoA2WwayJpok54KZPLa2mx93XmTpqrFLQRf",
+      "block_timestamp": "1734089757193894651",
+      "block": {
+        "block_height": 134883977
+      },
+      "receipt_conversion_tokens_burnt": "32074336819000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 350163534633500000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"shawn-seahorse.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/edit\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":140,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"yarotska.near\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 912189149208000000000
+      }
+    },
+    {
+      "id": "11249498192",
+      "receipt_id": "HxTrMMfHgzHJV7z8ErKFJEFcEkSujGJd4B82PEKLkkHA",
+      "predecessor_account_id": "yarotska.near",
+      "receiver_account_id": "events-committee.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "6HGCiTGE5aoz7L2yRGxz2tDGiTRHLvCd8i26s8uGH1ke",
+        "block_height": 134883978,
+        "block_timestamp": 1734089758340460000
+      },
+      "receipt_outcome": {
+        "gas_burnt": 5299512777555,
+        "tokens_burnt": 529951277755500000000,
+        "executor_account_id": "events-committee.near",
+        "status": true
+      },
+      "transaction_hash": "B8Qvue8unGYY3YiCawapANB56iaqJvMJEk6aV21qhQMU",
+      "included_in_block_hash": "BJxrzZQ1RmoA2WwayJpok54KZPLa2mx93XmTpqrFLQRf",
+      "block_timestamp": "1734089757193894651",
+      "block": {
+        "block_height": 134883977
+      },
+      "receipt_conversion_tokens_burnt": "32074336819000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "edit_proposal_versioned_timeline",
+        "deposit": 0,
+        "fee": 529951277755500000000,
+        "args": "{\"id\": 140, \"timeline\": {\"status\": \"PAYMENT_PROCESSING\", \"kyc_verified\": true, \"timeline_version\": \"V1\", \"test_transaction_sent\": true, \"sponsor_requested_review\": true, \"request_for_trustees_created\": false, \"reviewer_completed_attestation\": false}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 912189149208000000000
+      }
+    },
+    {
+      "id": "11249475397",
+      "receipt_id": "B1VJpvEsp92SKUUijnSBGwoV8b7B5ZG3vmpqyUXUe7iU",
+      "predecessor_account_id": "events-committee.near",
+      "receiver_account_id": "social.near",
+      "receipt_kind": "ACTION",
+      "receipt_block": {
+        "block_hash": "J3WqAnNCTYJq8RjDqa878HqmxVQV6nfX75QKPZUUeY7r",
+        "block_height": 134883944,
+        "block_timestamp": 1734089720391678000
+      },
+      "receipt_outcome": {
+        "gas_burnt": 3501635346335,
+        "tokens_burnt": 350163534633500000000,
+        "executor_account_id": "social.near",
+        "status": true
+      },
+      "transaction_hash": "FPAHaBDYw42BXHNAXAaZtJyGip7EodHFkCNCTRhcrLR3",
+      "included_in_block_hash": "FGkmzGjwmsGa1me85f7zGmejjmLGG5e3FRKAff1C89Et",
+      "block_timestamp": "1734089718397551222",
+      "block": {
+        "block_height": 134883942
+      },
+      "receipt_conversion_tokens_burnt": "42145137427000000000",
+      "actions": [{
+        "action": "FUNCTION_CALL",
+        "method": "set",
+        "deposit": 0,
+        "fee": 350163534633500000000,
+        "args": "{\"data\": {\"events-committee.near\": {\"index\": {\"notify\": \"{\\\\\\\\\\\\\\\"key\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"shawn-seahorse.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"value\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"type\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"proposal/edit\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"proposal\\\\\\\\\\\\\\\":140,\\\\\\\\\\\\\\\"widgetAccountId\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"events-committee.near\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"notifier\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"yarotska.near\\\\\\\\\\\\\\\"}}\"}}}}"
+      }],
+      "actions_agg": {
+        "deposit": 0
+      },
+      "outcomes": {
+        "status": true
+      },
+      "outcomes_agg": {
+        "transaction_fee": 869353019200200000000
+      }
+    }
+  ]
+}
