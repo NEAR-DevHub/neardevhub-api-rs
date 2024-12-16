@@ -108,6 +108,70 @@ async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
     }
 }
 
+#[rocket::async_test]
+async fn test_all_proposals_are_indexed() {
+    use reqwest;
+    use serde_json::Value;
+
+    let urls = [
+        "https://devhub-cache-api-rs.fly.dev/proposals",
+        "https://infra-cache-api-rs.fly.dev/proposals",
+        "https://events-cache-api-rs.fly.dev/proposals",
+    ];
+
+    // Create a reqwest client
+    let client = reqwest::Client::new();
+
+    // Make the HTTP request to the deployed API
+    let response = client
+        .get(urls[2])
+        .send()
+        .await
+        .expect("Failed to get response");
+
+    // Ensure the request was successful
+    assert!(response.status().is_success());
+
+    // Parse the response body as JSON
+    let result: Value = response
+        .json()
+        .await
+        .expect("Failed to parse response as JSON");
+
+    println!("Result: {:?}", result);
+
+    // Extract total count and records
+    let total = result["total_records"]
+        .as_i64()
+        .expect("Failed to get total count");
+
+    let records = result["records"]
+        .as_array()
+        .expect("Failed to get records array");
+
+    // Ensure we have records
+    assert!(!records.is_empty(), "No records found");
+
+    // Get the last proposal ID
+    let last_proposal = records.first().expect("Failed to get last record");
+
+    let last_id = last_proposal["proposal_id"]
+        .as_i64()
+        .expect("Failed to get proposal_id");
+
+    // Compare the last ID with the total count
+    // They should be equal if all proposals are properly indexed
+    assert_eq!(
+        last_id,
+        total - 1,
+        "Last proposal ID ({}) doesn't match total count ({})",
+        last_id,
+        total - 1
+    );
+
+    eprintln!("Total count: {}, Last ID: {}", total, last_id);
+}
+
 #[test]
 fn test_index() {
     use rocket::local::blocking::Client;

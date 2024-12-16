@@ -268,43 +268,11 @@ impl DB {
         let data_sql = format!(
             r#"
           SELECT
-              ps.proposal_id,
-              p.author_id,
-              ps.block_height,
-              ps.ts,
-              ps.editor_id,
-              ps.social_db_post_block_height,
-              ps.labels,
-              ps.proposal_version,
-              ps.proposal_body_version,
-              ps.name,
-              ps.category,
-              ps.summary,
-              ps.description,
-              ps.linked_proposals,
-              ps.linked_rfp,
-              ps.requested_sponsorship_usd_amount,
-              ps.requested_sponsorship_paid_in_currency,
-              ps.requested_sponsor,
-              ps.receiver_account,
-              ps.supervisor,
-              ps.timeline,
-              ps.views
+              *
           FROM
-              proposals p
-          INNER JOIN (
-              SELECT
-                  proposal_id,
-                  MAX(ts) AS max_ts
-              FROM
-                  proposal_snapshots
-              GROUP BY
-                  proposal_id
-          ) latest_snapshots ON p.id = latest_snapshots.proposal_id
-          INNER JOIN proposal_snapshots ps ON latest_snapshots.proposal_id = ps.proposal_id
-              AND latest_snapshots.max_ts = ps.ts
+              proposals_with_latest_snapshot ps
           WHERE
-              ($3 IS NULL OR p.author_id = $3)
+              ($3 IS NULL OR ps.author_id = $3)
               AND ($4 IS NULL OR ps.ts > $4)
               AND ($5 IS NULL OR ps.timeline::text ~ $5)
               AND ($6 IS NULL OR ps.category = $6)    
@@ -318,29 +286,13 @@ impl DB {
         // Build the count query
         let count_sql = r#"
           SELECT COUNT(*)
-          FROM (
-              SELECT
-                  ps.proposal_id
-              FROM
-                  proposals p
-              INNER JOIN (
-                  SELECT
-                      proposal_id,
-                      MAX(ts) AS max_ts
-                  FROM
-                      proposal_snapshots
-                  GROUP BY
-                      proposal_id
-              ) latest_snapshots ON p.id = latest_snapshots.proposal_id
-              INNER JOIN proposal_snapshots ps ON latest_snapshots.proposal_id = ps.proposal_id
-                  AND latest_snapshots.max_ts = ps.ts
-              WHERE
-                  ($1 IS NULL OR p.author_id = $1)
-                  AND ($2 IS NULL OR ps.ts > $2)
-                  AND ($3 IS NULL OR ps.timeline::text ~ $3)
-                  AND ($4 IS NULL OR ps.category = $4)    
-                  AND ($5 IS NULL OR ps.labels::jsonb ?| $5)
-          ) AS count_subquery
+          FROM proposals_with_latest_snapshot ps
+          WHERE
+              ($1 IS NULL OR ps.author_id = $1)
+              AND ($2 IS NULL OR ps.ts > $2)
+              AND ($3 IS NULL OR ps.timeline::text ~ $3)
+              AND ($4 IS NULL OR ps.category = $4)    
+              AND ($5 IS NULL OR ps.labels::jsonb ?| $5)
       "#;
 
         // Extract filter parameters
@@ -635,38 +587,11 @@ impl DB {
         let data_sql = format!(
             r#"
             SELECT
-                ps.rfp_id,
-                p.author_id,
-                ps.block_height,
-                ps.ts,
-                ps.editor_id,
-                ps.social_db_post_block_height,
-                ps.labels,
-                ps.linked_proposals,
-                ps.rfp_version,
-                ps.rfp_body_version,
-                ps.name,
-                ps.category,
-                ps.summary,
-                ps.description,
-                ps.timeline,
-                ps.views,
-                ps.submission_deadline
+                *
             FROM
-                rfps p
-            INNER JOIN (
-                SELECT
-                    rfp_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    rfp_snapshots
-                GROUP BY
-                    rfp_id
-            ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-            INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                AND latest_snapshots.max_ts = ps.ts
+                rfps_with_latest_snapshot ps
             WHERE
-                ($3 IS NULL OR p.author_id = $3)
+                ($3 IS NULL OR ps.author_id = $3)
                 AND ($4 IS NULL OR ps.ts > $4)
                 AND ($5 IS NULL OR ps.timeline::text ~ $5)
                 AND ($6 IS NULL OR ps.category = $6)
@@ -680,29 +605,13 @@ impl DB {
         // Build the SQL query for counting total records
         let count_sql = r#"
             SELECT COUNT(*)
-            FROM (
-                SELECT
-                    ps.rfp_id
-                FROM
-                    rfps p
-                INNER JOIN (
-                    SELECT
-                        rfp_id,
-                        MAX(ts) AS max_ts
-                    FROM
-                        rfp_snapshots
-                    GROUP BY
-                        rfp_id
-                ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-                INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                    AND latest_snapshots.max_ts = ps.ts
-                WHERE
-                    ($1 IS NULL OR p.author_id = $1)
-                    AND ($2 IS NULL OR ps.ts > $2)
-                    AND ($3 IS NULL OR ps.timeline::text ~ $3)
-                    AND ($4 IS NULL OR ps.category = $4)
-                    AND ($5 IS NULL OR ps.labels::jsonb ?| $5)
-            ) AS count_subquery
+            FROM rfps_with_latest_snapshot ps
+            WHERE
+                ($1 IS NULL OR ps.author_id = $1)
+                AND ($2 IS NULL OR ps.ts > $2)
+                AND ($3 IS NULL OR ps.timeline::text ~ $3)
+                AND ($4 IS NULL OR ps.category = $4)
+                AND ($5 IS NULL OR ps.labels::jsonb ?| $5)
         "#;
 
         // Extract filter parameters
@@ -742,23 +651,11 @@ impl DB {
     ) -> anyhow::Result<RfpWithLatestSnapshotView> {
         let sql = r#" 
             SELECT
-                ps.*,
-                p.author_id
+                ps.*
             FROM
-                rfps p
-            INNER JOIN (
-                SELECT
-                    rfp_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    rfp_snapshots
-                GROUP BY
-                    rfp_id
-            ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-            INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                AND latest_snapshots.max_ts = ps.ts
+                rfps_with_latest_snapshot ps
             WHERE
-                p.id = $1
+                ps.rfp_id = $1
         "#;
 
         let result = sqlx::query_as::<_, RfpWithLatestSnapshotView>(sql)
@@ -859,21 +756,9 @@ impl DB {
     ) -> anyhow::Result<(Vec<RfpWithLatestSnapshotView>, i64)> {
         let sql = r#"
             SELECT
-                ps.*,
-                p.author_id
+                ps.*
             FROM
-                rfps p
-            INNER JOIN (
-                SELECT
-                    rfp_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    rfp_snapshots
-                GROUP BY
-                    rfp_id
-            ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-            INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                AND latest_snapshots.max_ts = ps.ts
+                rfps_with_latest_snapshot ps
             WHERE
                 to_tsvector('english', coalesce(ps.name, '') || ' ' || coalesce(ps.summary, '') || ' ' || coalesce(ps.description, '')) @@ plainto_tsquery($1)
                 OR lower(ps.name) ILIKE $1
@@ -894,18 +779,7 @@ impl DB {
             SELECT
                 COUNT(*)
             FROM
-                rfps p
-            INNER JOIN (
-                SELECT
-                    rfp_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    rfp_snapshots
-                GROUP BY
-                    rfp_id
-            ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-            INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                AND latest_snapshots.max_ts = ps.ts
+                rfps_with_latest_snapshot ps
             WHERE
                 to_tsvector('english', coalesce(ps.name, '') || ' ' || coalesce(ps.summary, '') || ' ' || coalesce(ps.description, '')) @@ plainto_tsquery($1)
                 OR lower(ps.name) ILIKE $1
