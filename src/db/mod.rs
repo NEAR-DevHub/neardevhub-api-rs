@@ -146,53 +146,53 @@ impl DB {
         // Since primary key is (proposal_id, ts)
         let result = query!(
             r#"
-          INSERT INTO proposal_snapshots (
-              proposal_id,
-              block_height,
-              ts,
-              editor_id,
-              social_db_post_block_height,
-              labels,
-              proposal_version,
-              proposal_body_version,
-              name,
-              category,
-              summary,
-              description,
-              linked_proposals,
-              linked_rfp,
-              requested_sponsorship_usd_amount,
-              requested_sponsorship_paid_in_currency,
-              requested_sponsor,
-              receiver_account,
-              supervisor,
-              timeline,
-              views
-          ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8,
-              $9, $10, $11, $12, $13, $14,
-              $15, $16, $17, $18, $19, $20, $21
-          ) ON CONFLICT (proposal_id, ts) DO UPDATE SET
-              block_height = $2,
-              editor_id = $4,
-              social_db_post_block_height = $5,
-              labels = $6,
-              proposal_version = $7,
-              proposal_body_version = $8,
-              name = $9,
-              category = $10,
-              summary = $11,
-              description = $12,
-              linked_proposals = $13,
-              linked_rfp = $14,
-              requested_sponsorship_usd_amount = $15,
-              requested_sponsorship_paid_in_currency = $16,
-              requested_sponsor = $17,
-              receiver_account = $18,
-              supervisor = $19,
-              timeline = $20,
-              views = $21
-          "#,
+        INSERT INTO proposal_snapshots (
+            proposal_id,
+            block_height,
+            ts,
+            editor_id,
+            social_db_post_block_height,
+            labels,
+            proposal_version,
+            proposal_body_version,
+            name,
+            category,
+            summary,
+            description,
+            linked_proposals,
+            linked_rfp,
+            requested_sponsorship_usd_amount,
+            requested_sponsorship_paid_in_currency,
+            requested_sponsor,
+            receiver_account,
+            supervisor,
+            timeline,
+            views
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8,
+            $9, $10, $11, $12, $13, $14,
+            $15, $16, $17, $18, $19, $20, $21
+        ) ON CONFLICT (proposal_id, ts) DO UPDATE SET
+            block_height = $2,
+            editor_id = $4,
+            social_db_post_block_height = $5,
+            labels = $6,
+            proposal_version = $7,
+            proposal_body_version = $8,
+            name = $9,
+            category = $10,
+            summary = $11,
+            description = $12,
+            linked_proposals = $13,
+            linked_rfp = $14,
+            requested_sponsorship_usd_amount = $15,
+            requested_sponsorship_paid_in_currency = $16,
+            requested_sponsor = $17,
+            receiver_account = $18,
+            supervisor = $19,
+            timeline = $20,
+            views = $21
+        "#,
             snapshot.proposal_id,
             snapshot.block_height,
             snapshot.ts,
@@ -267,81 +267,33 @@ impl DB {
         // Build the SQL query with the validated order clause
         let data_sql = format!(
             r#"
-          SELECT
-              ps.proposal_id,
-              p.author_id,
-              ps.block_height,
-              ps.ts,
-              ps.editor_id,
-              ps.social_db_post_block_height,
-              ps.labels,
-              ps.proposal_version,
-              ps.proposal_body_version,
-              ps.name,
-              ps.category,
-              ps.summary,
-              ps.description,
-              ps.linked_proposals,
-              ps.linked_rfp,
-              ps.requested_sponsorship_usd_amount,
-              ps.requested_sponsorship_paid_in_currency,
-              ps.requested_sponsor,
-              ps.receiver_account,
-              ps.supervisor,
-              ps.timeline,
-              ps.views
-          FROM
-              proposals p
-          INNER JOIN (
-              SELECT
-                  proposal_id,
-                  MAX(ts) AS max_ts
-              FROM
-                  proposal_snapshots
-              GROUP BY
-                  proposal_id
-          ) latest_snapshots ON p.id = latest_snapshots.proposal_id
-          INNER JOIN proposal_snapshots ps ON latest_snapshots.proposal_id = ps.proposal_id
-              AND latest_snapshots.max_ts = ps.ts
-          WHERE
-              ($3 IS NULL OR p.author_id = $3)
-              AND ($4 IS NULL OR ps.ts > $4)
-              AND ($5 IS NULL OR ps.timeline::text ~ $5)
-              AND ($6 IS NULL OR ps.category = $6)    
-              AND ($7 IS NULL OR ps.labels::jsonb ?| $7)
-          ORDER BY {}
-          LIMIT $1 OFFSET $2
-          "#,
+        SELECT
+            *
+        FROM
+            proposals_with_latest_snapshot ps
+        WHERE
+            ($3 IS NULL OR ps.author_id = $3)
+            AND ($4 IS NULL OR ps.ts > $4)
+            AND ($5 IS NULL OR ps.timeline::text ~ $5)
+            AND ($6 IS NULL OR ps.category = $6)    
+            AND ($7 IS NULL OR ps.labels::jsonb ?| $7)
+        ORDER BY {}
+        LIMIT $1 OFFSET $2
+        "#,
             order_clause,
         );
 
         // Build the count query
         let count_sql = r#"
-          SELECT COUNT(*)
-          FROM (
-              SELECT
-                  ps.proposal_id
-              FROM
-                  proposals p
-              INNER JOIN (
-                  SELECT
-                      proposal_id,
-                      MAX(ts) AS max_ts
-                  FROM
-                      proposal_snapshots
-                  GROUP BY
-                      proposal_id
-              ) latest_snapshots ON p.id = latest_snapshots.proposal_id
-              INNER JOIN proposal_snapshots ps ON latest_snapshots.proposal_id = ps.proposal_id
-                  AND latest_snapshots.max_ts = ps.ts
-              WHERE
-                  ($1 IS NULL OR p.author_id = $1)
-                  AND ($2 IS NULL OR ps.ts > $2)
-                  AND ($3 IS NULL OR ps.timeline::text ~ $3)
-                  AND ($4 IS NULL OR ps.category = $4)    
-                  AND ($5 IS NULL OR ps.labels::jsonb ?| $5)
-          ) AS count_subquery
-      "#;
+        SELECT COUNT(*)
+        FROM proposals_with_latest_snapshot ps
+        WHERE
+            ($1 IS NULL OR ps.author_id = $1)
+            AND ($2 IS NULL OR ps.ts > $2)
+            AND ($3 IS NULL OR ps.timeline::text ~ $3)
+            AND ($4 IS NULL OR ps.category = $4)    
+            AND ($5 IS NULL OR ps.labels::jsonb ?| $5)
+    "#;
 
         // Extract filter parameters
         let author_id = filters.as_ref().and_then(|f| f.author_id.as_ref());
@@ -537,42 +489,42 @@ impl DB {
         // Primary key is (rfp_id, ts)
         let result = sqlx::query!(
             r#"
-          INSERT INTO rfp_snapshots (
-              rfp_id,
-              block_height,
-              ts,
-              editor_id,
-              social_db_post_block_height,
-              labels,
-              linked_proposals,
-              rfp_version,
-              rfp_body_version,
-              name,
-              category,
-              summary,
-              description,
-              timeline,
-              submission_deadline,
-              views
-          ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8,
-              $9, $10, $11, $12, $13, $14, $15, $16
-          ) ON CONFLICT (rfp_id, ts) DO UPDATE SET
-              block_height = $2,
-              editor_id = $4,
-              social_db_post_block_height = $5,
-              labels = $6,
-              linked_proposals = $7,
-              rfp_version = $8,
-              rfp_body_version = $9,
-              name = $10,
-              category = $11,
-              summary = $12,
-              description = $13,
-              timeline = $14,
-              submission_deadline = $15,
-              views = $16
-          "#,
+        INSERT INTO rfp_snapshots (
+            rfp_id,
+            block_height,
+            ts,
+            editor_id,
+            social_db_post_block_height,
+            labels,
+            linked_proposals,
+            rfp_version,
+            rfp_body_version,
+            name,
+            category,
+            summary,
+            description,
+            timeline,
+            submission_deadline,
+            views
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8,
+            $9, $10, $11, $12, $13, $14, $15, $16
+        ) ON CONFLICT (rfp_id, ts) DO UPDATE SET
+            block_height = $2,
+            editor_id = $4,
+            social_db_post_block_height = $5,
+            labels = $6,
+            linked_proposals = $7,
+            rfp_version = $8,
+            rfp_body_version = $9,
+            name = $10,
+            category = $11,
+            summary = $12,
+            description = $13,
+            timeline = $14,
+            submission_deadline = $15,
+            views = $16
+        "#,
             snapshot.rfp_id,
             snapshot.block_height,
             snapshot.ts,
@@ -634,76 +586,33 @@ impl DB {
         // Build the SQL query for fetching data with the validated order clause
         let data_sql = format!(
             r#"
-            SELECT
-                ps.rfp_id,
-                p.author_id,
-                ps.block_height,
-                ps.ts,
-                ps.editor_id,
-                ps.social_db_post_block_height,
-                ps.labels,
-                ps.linked_proposals,
-                ps.rfp_version,
-                ps.rfp_body_version,
-                ps.name,
-                ps.category,
-                ps.summary,
-                ps.description,
-                ps.timeline,
-                ps.views,
-                ps.submission_deadline
-            FROM
-                rfps p
-            INNER JOIN (
-                SELECT
-                    rfp_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    rfp_snapshots
-                GROUP BY
-                    rfp_id
-            ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-            INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                AND latest_snapshots.max_ts = ps.ts
-            WHERE
-                ($3 IS NULL OR p.author_id = $3)
-                AND ($4 IS NULL OR ps.ts > $4)
-                AND ($5 IS NULL OR ps.timeline::text ~ $5)
-                AND ($6 IS NULL OR ps.category = $6)
-                AND ($7 IS NULL OR ps.labels::jsonb ?| $7)
-            ORDER BY {}
-            LIMIT $1 OFFSET $2
-            "#,
+          SELECT
+              *
+          FROM
+              rfps_with_latest_snapshot ps
+          WHERE
+              ($3 IS NULL OR ps.author_id = $3)
+              AND ($4 IS NULL OR ps.ts > $4)
+              AND ($5 IS NULL OR ps.timeline::text ~ $5)
+              AND ($6 IS NULL OR ps.category = $6)
+              AND ($7 IS NULL OR ps.labels::jsonb ?| $7)
+          ORDER BY {}
+          LIMIT $1 OFFSET $2
+          "#,
             order_clause,
         );
 
         // Build the SQL query for counting total records
         let count_sql = r#"
-            SELECT COUNT(*)
-            FROM (
-                SELECT
-                    ps.rfp_id
-                FROM
-                    rfps p
-                INNER JOIN (
-                    SELECT
-                        rfp_id,
-                        MAX(ts) AS max_ts
-                    FROM
-                        rfp_snapshots
-                    GROUP BY
-                        rfp_id
-                ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-                INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                    AND latest_snapshots.max_ts = ps.ts
-                WHERE
-                    ($1 IS NULL OR p.author_id = $1)
-                    AND ($2 IS NULL OR ps.ts > $2)
-                    AND ($3 IS NULL OR ps.timeline::text ~ $3)
-                    AND ($4 IS NULL OR ps.category = $4)
-                    AND ($5 IS NULL OR ps.labels::jsonb ?| $5)
-            ) AS count_subquery
-        "#;
+          SELECT COUNT(*)
+          FROM rfps_with_latest_snapshot ps
+          WHERE
+              ($1 IS NULL OR ps.author_id = $1)
+              AND ($2 IS NULL OR ps.ts > $2)
+              AND ($3 IS NULL OR ps.timeline::text ~ $3)
+              AND ($4 IS NULL OR ps.category = $4)
+              AND ($5 IS NULL OR ps.labels::jsonb ?| $5)
+      "#;
 
         // Extract filter parameters
         let author_id = filters.as_ref().and_then(|f| f.author_id.as_ref());
@@ -741,25 +650,13 @@ impl DB {
         id: i32,
     ) -> anyhow::Result<RfpWithLatestSnapshotView> {
         let sql = r#" 
-            SELECT
-                ps.*,
-                p.author_id
-            FROM
-                rfps p
-            INNER JOIN (
-                SELECT
-                    rfp_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    rfp_snapshots
-                GROUP BY
-                    rfp_id
-            ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-            INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                AND latest_snapshots.max_ts = ps.ts
-            WHERE
-                p.id = $1
-        "#;
+          SELECT
+              ps.*
+          FROM
+              rfps_with_latest_snapshot ps
+          WHERE
+              ps.rfp_id = $1
+      "#;
 
         let result = sqlx::query_as::<_, RfpWithLatestSnapshotView>(sql)
             .bind(id)
@@ -858,30 +755,18 @@ impl DB {
         offset: i64,
     ) -> anyhow::Result<(Vec<RfpWithLatestSnapshotView>, i64)> {
         let sql = r#"
-            SELECT
-                ps.*,
-                p.author_id
-            FROM
-                rfps p
-            INNER JOIN (
-                SELECT
-                    rfp_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    rfp_snapshots
-                GROUP BY
-                    rfp_id
-            ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-            INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                AND latest_snapshots.max_ts = ps.ts
-            WHERE
-                to_tsvector('english', coalesce(ps.name, '') || ' ' || coalesce(ps.summary, '') || ' ' || coalesce(ps.description, '')) @@ plainto_tsquery($1)
-                OR lower(ps.name) ILIKE $1
-                OR lower(ps.summary) ILIKE $1
-                OR lower(ps.description) ILIKE $1
-            ORDER BY ps.ts DESC
-            LIMIT $2 OFFSET $3
-        "#;
+          SELECT
+              ps.*
+          FROM
+              rfps_with_latest_snapshot ps
+          WHERE
+              to_tsvector('english', coalesce(ps.name, '') || ' ' || coalesce(ps.summary, '') || ' ' || coalesce(ps.description, '')) @@ plainto_tsquery($1)
+              OR lower(ps.name) ILIKE $1
+              OR lower(ps.summary) ILIKE $1
+              OR lower(ps.description) ILIKE $1
+          ORDER BY ps.ts DESC
+          LIMIT $2 OFFSET $3
+      "#;
 
         let rfps = sqlx::query_as::<_, RfpWithLatestSnapshotView>(sql)
             .bind(input)
@@ -891,27 +776,16 @@ impl DB {
             .await?;
 
         let total_count_sql = r#"
-            SELECT
-                COUNT(*)
-            FROM
-                rfps p
-            INNER JOIN (
-                SELECT
-                    rfp_id,
-                    MAX(ts) AS max_ts
-                FROM
-                    rfp_snapshots
-                GROUP BY
-                    rfp_id
-            ) latest_snapshots ON p.id = latest_snapshots.rfp_id
-            INNER JOIN rfp_snapshots ps ON latest_snapshots.rfp_id = ps.rfp_id
-                AND latest_snapshots.max_ts = ps.ts
-            WHERE
-                to_tsvector('english', coalesce(ps.name, '') || ' ' || coalesce(ps.summary, '') || ' ' || coalesce(ps.description, '')) @@ plainto_tsquery($1)
-                OR lower(ps.name) ILIKE $1
-                OR lower(ps.summary) ILIKE $1
-                OR lower(ps.description) ILIKE $1
-        "#;
+          SELECT
+              COUNT(*)
+          FROM
+              rfps_with_latest_snapshot ps
+          WHERE
+              to_tsvector('english', coalesce(ps.name, '') || ' ' || coalesce(ps.summary, '') || ' ' || coalesce(ps.description, '')) @@ plainto_tsquery($1)
+              OR lower(ps.name) ILIKE $1
+              OR lower(ps.summary) ILIKE $1
+              OR lower(ps.description) ILIKE $1
+      "#;
 
         let total_count = sqlx::query_scalar::<_, i64>(total_count_sql)
             .bind(input)
