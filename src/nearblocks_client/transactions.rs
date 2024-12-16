@@ -165,15 +165,17 @@ mod tests {
         let api_key = std::env::var("NEARBLOCKS_API_KEY")
             .expect("NEARBLOCKS_API_KEY environment variable not set");
         let client = nearblocks_client::ApiClient::new(api_key);
-        let contract: AccountId = "events-committee.near".parse().expect("Invalid account ID");
+        let contract: AccountId = "infrastructure-committee.near"
+            .parse()
+            .expect("Invalid account ID");
 
         let (transactions, current_cursor) =
             fetch_all_new_transactions(&client, &contract, Some(0)).await;
 
         // Check total count
         assert!(
-            transactions.len() >= 1800,
-            "Expected at least 1800 transactions, but got {}",
+            transactions.len() >= 600,
+            "Expected at least 600 transactions, but got {}",
             transactions.len()
         );
 
