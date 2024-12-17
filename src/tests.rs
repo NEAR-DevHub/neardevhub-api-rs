@@ -16,10 +16,9 @@ use serde_json::{json, Value};
  * Test that new comment block heights are registered
  */
 
-
 #[rocket::async_test]
 async fn test_new_proposals_appear_in_cache() {
-  use rocket::local::asynchronous::Client;
+    use rocket::local::asynchronous::Client;
 
     let client = Client::tracked(super::rocket())
         .await
@@ -42,6 +41,8 @@ async fn test_new_proposals_appear_in_cache() {
     } else {
         result
     };
+
+    assert_eq!(result.records.len(), 50);
 }
 
 #[rocket::async_test]
@@ -239,5 +240,85 @@ fn test_separate_number_and_text() {
     assert_eq!(
         separate_number_and_text("test 123"),
         (Some(123), "test".to_string())
+    );
+
+    // Multiple numbers in the string
+    assert_eq!(
+        separate_number_and_text("123test456"),
+        (Some(123), "test456".to_string())
+    );
+
+    // String with special characters
+    assert_eq!(
+        separate_number_and_text("@#$%^&*()"),
+        (None, "@#$%^&*()".to_string())
+    );
+
+    // Negative number should be ignored
+    assert_eq!(
+        separate_number_and_text("-123 test"),
+        (Some(123), "- test".to_string())
+    );
+}
+
+#[test]
+fn test_cors_configuration() {
+    use rocket::http::{Header, Status};
+    use rocket::local::blocking::Client;
+
+    let client = Client::tracked(super::rocket()).expect("valid Rocket instance");
+
+    // Test allowed origin
+    let response = client
+        .options("/")
+        .header(Header::new("Origin", "http://localhost:3000"))
+        .header(Header::new("Access-Control-Request-Method", "GET"))
+        .dispatch();
+    assert_eq!(response.status(), Status::Ok);
+    assert!(response
+        .headers()
+        .get("Access-Control-Allow-Origin")
+        .next()
+        .is_some());
+
+    // Test disallowed origin
+    let response = client
+        .options("/")
+        .header(Header::new("Origin", "http://disallowed-origin.com"))
+        .header(Header::new("Access-Control-Request-Method", "GET"))
+        .dispatch();
+
+    assert_eq!(response.status(), Status::NoContent);
+}
+
+#[test]
+fn test_custom_error_handler() {
+    use rocket::http::Status;
+    use rocket::local::blocking::Client;
+
+    let client = Client::tracked(super::rocket()).expect("valid Rocket instance");
+
+    // Test 404 Not Found
+    let response = client.get("/nonexistent_route").dispatch();
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(
+        response.into_string().unwrap(),
+        "Custom 404 Error: Not Found"
+    );
+}
+
+#[rocket::async_test]
+async fn test_route_test() {
+    use rocket::local::asynchronous::Client;
+
+    let client = Client::tracked(super::rocket())
+        .await
+        .expect("valid Rocket instance");
+
+    // Test valid request
+    let response = client.get("/test").dispatch().await;
+    assert_eq!(
+        response.into_string().await.unwrap(),
+        "Welcome to devhub.near"
     );
 }
