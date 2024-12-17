@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO rfp_snapshots (\n            rfp_id,\n            block_height,\n            ts,\n            editor_id,\n            social_db_post_block_height,\n            labels,\n            linked_proposals,\n            rfp_version,\n            rfp_body_version,\n            name,\n            category,\n            summary,\n            description,\n            timeline,\n            submission_deadline,\n            views\n        ) VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8,\n            $9, $10, $11, $12, $13, $14, $15, $16\n        ) ON CONFLICT (rfp_id, ts) DO UPDATE SET\n            block_height = $2,\n            editor_id = $4,\n            social_db_post_block_height = $5,\n            labels = $6,\n            linked_proposals = $7,\n            rfp_version = $8,\n            rfp_body_version = $9,\n            name = $10,\n            category = $11,\n            summary = $12,\n            description = $13,\n            timeline = $14,\n            submission_deadline = $15,\n            views = $16\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8",
+        "Int8",
+        "Varchar",
+        "Int8",
+        "Jsonb",
+        "Jsonb",
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Varchar",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d6e0f659dce32aab6ab939073d2b8c550d9c5e7cd5558f2aaab7e002747bd7d1"
+}
