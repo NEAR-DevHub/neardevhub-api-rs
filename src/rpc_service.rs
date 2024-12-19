@@ -149,48 +149,4 @@ impl RpcService {
             }
         }
     }
-
-    pub async fn query(
-        &self,
-        method_name: String,
-        block_id: i64,
-        args_base64: String,
-    ) -> Result<String, Status> {
-        let args = json!({
-          "request_type": "call_function",
-          "account_id": self.contract.0.to_string(),
-          "block_id": block_id,
-          "method_name": method_name,
-          "args_base64": args_base64
-        });
-
-        println!("Querying args: {:?}", args);
-
-        let result: Result<Data<QueryResponse>, _> = self
-            .contract
-            .call_function("query", args)
-            .unwrap()
-            .read_only()
-            .fetch_from(&self.network)
-            .await;
-
-        match result {
-            Ok(res) => {
-                // From ascii code to string
-                let decoded = res
-                    .data
-                    .result
-                    .result
-                    .iter()
-                    .map(|c| *c as u8 as char)
-                    .collect();
-                // Should return JSON object?
-                Ok(decoded)
-            }
-            Err(e) => {
-                eprintln!("Failed to query: {:?}", e);
-                Err(Status::InternalServerError)
-            }
-        }
-    }
 }
