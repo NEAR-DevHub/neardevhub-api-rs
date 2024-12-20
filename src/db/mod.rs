@@ -1,7 +1,12 @@
 use crate::{
-    entrypoints::{proposal::proposal_types::GetProposalFilters, rfp::rfp_types::GetRfpFilters},
+    entrypoints::{
+        proposal::proposal_types::GetProposalFilters,
+        rfp::rfp_types::GetRfpFilters,
+        sputnik::{GetDaoProposalsFilters, GetTxnsFilters},
+    },
     timestamp_to_date_string,
 };
+use near_sdk::AccountId;
 use rocket::{
     fairing::{self, AdHoc},
     Build, Rocket,
@@ -17,7 +22,7 @@ pub mod db_types;
 
 use db_types::{
     BlockHeight, LastUpdatedInfo, ProposalSnapshotRecord, ProposalWithLatestSnapshotView,
-    RfpSnapshotRecord, RfpWithLatestSnapshotView,
+    RfpSnapshotRecord, RfpWithLatestSnapshotView, SputnikProposalSnapshotRecord, SputnikTxnsRecord,
 };
 
 impl DB {
@@ -73,6 +78,58 @@ impl DB {
             after_block: rec.after_block,
             cursor: rec.cursor,
         })
+    }
+
+    pub async fn set_last_updated_info_for_contract(
+        &self,
+        contract: &AccountId,
+        after_date: i64,
+        after_block: BlockHeight,
+    ) -> Result<(), Error> {
+        sqlx::query!(
+            r#"
+            INSERT INTO dao_instances_last_updated_info (instance, after_date, after_block)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (instance) DO UPDATE SET
+              after_date = $2,
+              after_block = $3
+            "#,
+            contract.to_string(),
+            after_date,
+            after_block,
+        )
+        .execute(&self.0)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn get_last_updated_info_for_contract(
+        &self,
+        contract: &AccountId,
+    ) -> Result<LastUpdatedInfo, Error> {
+        let rec = query!(
+            r#"
+          SELECT after_date, after_block FROM dao_instances_last_updated_info
+          WHERE instance = $1
+          "#,
+            contract.to_string()
+        )
+        .fetch_optional(&self.0)
+        .await?;
+
+        if let Some(rec) = rec {
+            Ok(LastUpdatedInfo {
+                after_date: rec.after_date,
+                after_block: rec.after_block,
+                cursor: "".to_string(),
+            })
+        } else {
+            Ok(LastUpdatedInfo {
+                after_date: 0,
+                after_block: 0,
+                cursor: "".to_string(),
+            })
+        }
     }
 
     pub async fn set_last_updated_info(
@@ -465,6 +522,18 @@ impl DB {
         Ok(())
     }
 
+    // TODO Remove this once we go in production or put it behind authentication or a flag
+    pub async fn remove_all_dao_proposals(&self, account_id: &str) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"DELETE FROM dao_proposals WHERE dao_instance = $1"#,
+            account_id
+        )
+        .execute(&self.0)
+        .await?;
+
+        Ok(())
+    }
+
     pub async fn remove_all_data(&self) -> anyhow::Result<()> {
         sqlx::query!(r#"DELETE FROM proposals"#)
             .execute(&self.0)
@@ -830,6 +899,233 @@ impl DB {
             .await?;
 
         Ok(snapshot)
+    }
+
+    pub async fn upsert_dao_proposal_snapshot(
+        tx: &mut Transaction<'static, Postgres>,
+        record: SputnikProposalSnapshotRecord,
+    ) -> anyhow::Result<()> {
+        let sql = r#"
+          INSERT INTO dao_proposals (description, id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          ON CONFLICT (id) DO UPDATE SET
+            description = $1,
+            kind = $3,
+            proposer = $4,
+            status = $5,
+            submission_time = $6,
+            vote_counts = $7,
+            votes = $8,
+            total_votes = $9,
+            dao_instance = $10,
+            proposal_action = $11,
+            tx_timestamp = $12,
+            hash = $13
+        "#;
+        let result = sqlx::query(sql)
+            .bind(record.description)
+            .bind(record.id)
+            .bind(record.kind)
+            .bind(record.proposer)
+            .bind(record.status)
+            .bind(record.submission_time)
+            .bind(record.vote_counts)
+            .bind(record.votes)
+            .bind(record.total_votes)
+            .bind(record.dao_instance)
+            .bind(record.proposal_action)
+            .bind(record.tx_timestamp)
+            .bind(record.hash)
+            .execute(tx.as_mut())
+            .await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!("Failed to insert dao proposal snapshot: {:?}", e);
+                Err(anyhow::anyhow!("Failed to insert dao proposal snapshot"))
+            }
+        }
+    }
+
+    pub async fn insert_txn(
+        tx: &mut Transaction<'static, Postgres>,
+        record: SputnikTxnsRecord,
+    ) -> anyhow::Result<()> {
+        let sql = r#"
+          INSERT INTO txns (id, hash, author_id, dao_instance, proposer, description, kind, status, total_votes, vote_counts, votes, submission_time, proposal_action)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        "#;
+        let result = sqlx::query(sql)
+            .bind(record.id)
+            .bind(record.hash)
+            .bind(record.author_id)
+            .bind(&record.dao_instance)
+            .bind(record.proposer)
+            .bind(record.description)
+            .bind(record.kind)
+            .bind(record.status)
+            .bind(record.total_votes)
+            .bind(record.vote_counts)
+            .bind(record.votes)
+            .bind(record.submission_time)
+            .bind(record.proposal_action)
+            .execute(tx.as_mut())
+            .await;
+
+        match result {
+            Ok(_) => {
+                println!(
+                    "Inserted transaction from account {} and id {:?}",
+                    &record.dao_instance, record.id
+                );
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("Failed to insert txn: {:?}", e);
+                Err(anyhow::anyhow!("Failed to insert txn"))
+            }
+        }
+    }
+
+    // pub async fn get_proposal_by_id(
+    //     &self,
+    //     proposal_id: i64,
+    // ) -> Result<Option<ProposalRecord>, sqlx::Error> {
+    //     let sql = r#"
+    //       SELECT *
+    //       FROM proposals
+    //       WHERE id = $1
+    //     "#;
+    //     let proposal = sqlx::query_as::<_, ProposalRecord>(sql)
+    //         .bind(proposal_id)
+    //         .fetch_optional(&self.0)
+    //         .await?;
+    //     Ok(proposal)
+    // }
+
+    pub async fn get_dao_proposals(
+        &self,
+        dao_instance: &str,
+        limit: i64,
+        order: &str,
+        offset: i64,
+        filters: Option<GetDaoProposalsFilters>,
+    ) -> anyhow::Result<(Vec<SputnikProposalSnapshotRecord>, i64)> {
+        let order_clause = match order.to_lowercase().as_str() {
+            "ts_asc" => "submission_time ASC",
+            "ts_desc" => "submission_time DESC",
+            "id_asc" => "id ASC",
+            "id_desc" => "id DESC",
+            _ => "id DESC", // Default to DESC if the order is not recognized
+        };
+
+        let kind = filters.as_ref().and_then(|f| f.kind.as_ref());
+        // let total_votes = filters.as_ref().and_then(|f| f.total_votes.as_ref());
+        let status = filters.as_ref().and_then(|f| f.status.as_ref());
+
+        /*
+         * TODO add filters
+        *  AND ($2 IS NULL OR kind->>'key' ILIKE '%' || $2 || '%')
+         AND ($3 IS NULL OR status->>'key' ILIKE '%' || $3 || '%')
+        */
+        let sql = format!(
+            r#"
+          SELECT *
+          FROM dao_proposals
+          WHERE dao_instance = $1
+          ORDER BY {}
+          LIMIT $4 OFFSET $5
+        "#,
+            order_clause,
+        );
+
+        let proposals = sqlx::query_as::<_, SputnikProposalSnapshotRecord>(&sql)
+            .bind(dao_instance)
+            .bind(kind)
+            .bind(status)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.0)
+            .await?;
+
+        /*
+        AND ($2 IS NULL OR kind->>'key' ILIKE '%' || $2 || '%')
+        AND ($3 IS NULL OR status->>'key' ILIKE '%' || $3 || '%') */
+        let count_sql = r#"
+            SELECT COUNT(*)
+            FROM dao_proposals
+            WHERE dao_instance = $1
+        "#;
+
+        let total_count = sqlx::query_scalar::<_, i64>(count_sql)
+            .bind(dao_instance)
+            .bind(kind)
+            .bind(status)
+            .fetch_one(&self.0)
+            .await?;
+
+        Ok((proposals, total_count))
+    }
+
+    pub async fn get_txns(
+        &self,
+        account_id: &str,
+        limit: i64,
+        order: &str,
+        offset: i64,
+        filters: Option<GetTxnsFilters>,
+    ) -> anyhow::Result<(Vec<SputnikTxnsRecord>, i64)> {
+        // Validate the order clause to prevent SQL injection
+        let order_clause = match order.to_lowercase().as_str() {
+            "ts_asc" => "submission_time ASC",
+            "ts_desc" => "submission_time DESC",
+            "id_asc" => "id ASC",
+            "id_desc" => "id DESC",
+            _ => "id DESC", // Default to DESC if the order is not recognized
+        };
+
+        let author_id = filters.as_ref().and_then(|f| f.author_id.as_ref());
+        let kind = filters.as_ref().and_then(|f| f.kind.as_ref());
+        // let total_votes = filters.as_ref().and_then(|f| f.total_votes.as_ref());
+        let status = filters.as_ref().and_then(|f| f.status.as_ref());
+
+        let sql = format!(
+            r#"
+          SELECT *
+          FROM txns
+          WHERE dao_instance = $1
+          AND ($2 IS NULL OR author_id = $2)
+          AND ($3 IS NULL OR kind = $3)
+          AND ($4 IS NULL OR status = $4)
+          ORDER BY {}
+          LIMIT $5 OFFSET $6
+        "#,
+            order_clause,
+        );
+
+        let txns = sqlx::query_as::<_, SputnikTxnsRecord>(&sql)
+            .bind(account_id)
+            .bind(author_id)
+            .bind(kind)
+            .bind(status)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.0)
+            .await?;
+
+        let count_sql = r#"
+            SELECT COUNT(*)
+            FROM txns
+            WHERE dao_instance = $1
+        "#;
+
+        let total_count = sqlx::query_scalar::<_, i64>(count_sql)
+            .bind(account_id)
+            .fetch_one(&self.0)
+            .await?;
+
+        Ok((txns, total_count))
     }
 }
 

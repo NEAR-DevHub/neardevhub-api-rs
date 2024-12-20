@@ -2,6 +2,7 @@ use crate::db::DB;
 use crate::nearblocks_client;
 use crate::nearblocks_client::proposal::{handle_edit_proposal, handle_set_block_height_callback};
 use crate::nearblocks_client::rfp::{handle_edit_rfp, handle_set_rfp_block_height_callback};
+use crate::nearblocks_client::sputnik::{handle_act_proposal, handle_add_proposal};
 use crate::nearblocks_client::types::Transaction;
 use near_account_id::AccountId;
 use rocket::{http::Status, State};
@@ -13,6 +14,15 @@ async fn fetch_all_new_transactions(
 ) -> (Vec<Transaction>, String) {
     let mut all_transactions = Vec::new();
     let mut current_cursor = "".to_string();
+
+    // TODO remove
+    // if contract == "testing-astradao.sputnik-dao.near" {
+    //     // Read from file
+    //     let file_path = format!("transactions_{}.json", contract.to_string());
+    //     let json_data = std::fs::read_to_string(file_path).unwrap();
+    //     let transactions: Vec<Transaction> = serde_json::from_str(&json_data).unwrap();
+    //     return (transactions.into_iter().rev().collect(), "None".to_string());
+    // }
 
     loop {
         let response = match nearblocks_client
@@ -39,7 +49,7 @@ async fn fetch_all_new_transactions(
         );
 
         // Check if we've wrapped around or reached the end
-        if response.cursor.is_none() {
+        if response.cursor.is_none() || contract == "testing-astradao.sputnik-dao.near" {
             println!("Cursor has wrapped around, finished fetching transactions");
             all_transactions.extend(response.txns);
             current_cursor = "None".to_string();
@@ -48,6 +58,11 @@ async fn fetch_all_new_transactions(
 
         // Add transactions to our collection
         all_transactions.extend(response.txns);
+
+        // For testing purposes write to a json file
+        // let file_path = format!("transactions_{}.json", contract.to_string());
+        // let json_data = serde_json::to_string(&all_transactions).unwrap();
+        // std::fs::write(file_path, json_data).unwrap();
 
         // Update cursor for next iteration
         current_cursor = response.cursor.unwrap();
@@ -139,6 +154,14 @@ pub async fn process(
                     println!("set_rfp_block_height_callback");
                     handle_set_rfp_block_height_callback(transaction.to_owned(), db, contract).await
                 }
+                "add_proposal" => {
+                    println!("add_proposal");
+                    handle_add_proposal(transaction.to_owned(), db, contract).await
+                }
+                // "act_proposal" => {
+                //     println!("act_proposal");
+                //     handle_act_proposal(transaction.to_owned(), db, contract).await
+                // }
                 _ => {
                     if action.action == "FUNCTION_CALL" {
                         // println!("Unhandled method: {:?}", action.method.as_ref().unwrap());

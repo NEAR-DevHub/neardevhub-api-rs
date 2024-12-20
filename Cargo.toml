@@ -28,11 +28,12 @@ anyhow = "1.0.76"
 rocket_cors = "0.6.0"
 utoipa-swagger-ui = { version = "7.1", features = ["rocket"] }
 reqwest = "0.12.8"
-near-api = { git = "https://github.com/near/near-api-rs" }
+near-api = "0.3.0"
 near-jsonrpc-client = "0.14.0"
 regex = "1.11.1"
 base64 = "0.22.1"
 futures = "0.3.31"
+borsh = "1.5.3"
 
 [features]
 default = ["workspaces"]

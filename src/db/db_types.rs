@@ -139,3 +139,37 @@ pub struct RfpDumpRecord {
     pub author: String,
     pub rfp_id: i32,
 }
+
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
+pub struct SputnikTxnsRecord {
+    pub id: i64,
+    pub hash: String,
+    pub author_id: String,
+    pub dao_instance: String,
+    pub proposer: String,
+    pub description: String,
+    pub kind: String,
+    pub status: String,
+    pub total_votes: i64,
+    pub vote_counts: serde_json::Value,
+    pub votes: serde_json::Value,
+    pub submission_time: i64,
+    pub proposal_action: String,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
+pub struct SputnikProposalSnapshotRecord {
+    pub description: String,
+    pub id: i64,
+    pub kind: serde_json::Value,
+    pub proposer: String,
+    pub status: String,
+    pub submission_time: i64,
+    pub vote_counts: serde_json::Value,
+    pub votes: serde_json::Value,
+    pub total_votes: i64,
+    pub dao_instance: String,
+    pub proposal_action: String,
+    pub tx_timestamp: i64,
+    pub hash: String,
+}
