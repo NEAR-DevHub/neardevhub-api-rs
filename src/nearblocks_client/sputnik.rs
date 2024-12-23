@@ -11,12 +11,12 @@ use serde_json::Value;
 
 use super::types::BLOCK_HEIGHT_OFFSET;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AddProposalArgs {
     pub proposal: ProposalInput,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ProposalInput {
     pub description: String,
     pub kind: ProposalKind,
@@ -81,13 +81,15 @@ pub async fn handle_add_proposal(
     db: &State<DB>,
     contract: &AccountId,
 ) -> Result<(), Status> {
-    // let action = transaction
-    //     .actions
-    //     .as_ref()
-    //     .and_then(|actions| actions.first())
-    //     .ok_or(Status::InternalServerError)?;
-    // let json_args = action.args.clone();
-    // let args: AddProposalArgs = serde_json::from_str(&json_args.unwrap_or_default()).unwrap();
+    let action = transaction
+        .actions
+        .as_ref()
+        .and_then(|actions| actions.first())
+        .ok_or(Status::InternalServerError)?;
+    let json_args = action.args.clone();
+    let args: AddProposalArgs = serde_json::from_str(&json_args.unwrap_or_default()).unwrap();
+
+    println!("Args: {:?}", args);
 
     let rpc_service = RpcService::new(contract);
 
@@ -98,7 +100,7 @@ pub async fn handle_add_proposal(
         )
         .await
     {
-        Ok(last_proposal_id) => last_proposal_id.data,
+        Ok(last_proposal_id) => last_proposal_id.data - 1, // TODO TEST
         Err(e) => {
             eprintln!("Failed to get last dao proposal id on block: {:?}", e);
             return Err(Status::InternalServerError);

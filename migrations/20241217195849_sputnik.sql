@@ -30,34 +30,6 @@ CREATE INDEX idx_dao_proposals_dao_instance ON dao_proposals (dao_instance);
 CREATE INDEX idx_dao_proposals_proposal_action ON dao_proposals (proposal_action);
 
 CREATE TABLE IF NOT EXISTS
-  txns (
-    id SERIAL PRIMARY KEY,
-    tx_id BIGINT NOT NULL,
-    hash VARCHAR NOT NULL,
-    author_id VARCHAR NOT NULL,
-    dao_instance VARCHAR NOT NULL,
-    proposer VARCHAR NOT NULL,
-    description VARCHAR NOT NULL,
-    kind VARCHAR NOT NULL,
-    status VARCHAR NOT NULL,
-    total_votes INT NOT NULL,
-    vote_counts JSONB NOT NULL,
-    votes JSONB NOT NULL,
-    submission_time BIGINT NOT NULL,
-    proposal_action VARCHAR NOT NULL
-  );
-
-CREATE INDEX idx_txns_hash ON txns (hash);
-CREATE INDEX idx_txns_author_id ON txns (author_id);
-CREATE INDEX idx_txns_dao_instance ON txns (dao_instance);
-CREATE INDEX idx_txns_proposer ON txns (proposer);
-CREATE INDEX idx_txns_description ON txns (description);
-CREATE INDEX idx_txns_kind ON txns (kind);
-CREATE INDEX idx_txns_status ON txns (status);
-CREATE INDEX idx_txns_submission_time ON txns (submission_time);
-CREATE INDEX idx_txns_proposal_action ON txns (proposal_action);
-
-CREATE TABLE IF NOT EXISTS
   dao_instances_last_updated_info (
     instance VARCHAR NOT NULL PRIMARY KEY,
     after_date BIGINT NOT NULL,

@@ -212,13 +212,13 @@ impl RpcService {
             Err(on_block_error) => match self.get_dao_proposal(proposal_id).await {
                 Ok(proposal) => Ok(proposal.data),
                 Err(rpc_error) => {
+                    eprintln!("Block error {:?}", on_block_error);
                     eprintln!(
                         "Failed get_dao_proposal_on_block from RPC on block height {} and id {}",
                         block_id, proposal_id,
                     );
-                    eprintln!("{:?}", on_block_error);
-                    eprintln!("{:?}", rpc_error);
-                    // Err(Status::InternalServerError)
+                    eprintln!("RPC error {:?}", rpc_error);
+
                     // TODO issue 1018
                     Ok(ProposalOutput {
                         id: proposal_id.try_into().unwrap(),

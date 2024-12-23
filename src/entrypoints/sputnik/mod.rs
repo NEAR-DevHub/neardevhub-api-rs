@@ -23,17 +23,6 @@ pub struct GetDaoProposalsFilters {
     pub proposal_action: Option<String>,
 }
 
-#[derive(Clone, Debug, FromForm, ToSchema)]
-pub struct GetTxnsFilters {
-    pub author_id: Option<String>,
-    pub instance: Option<String>,
-    pub proposer: Option<String>,
-    pub status: Option<String>,
-    pub kind: Option<String>,
-    pub description: Option<String>,
-    pub proposal_action: Option<String>,
-}
-
 async fn fetch_dao_proposals(
     db: &DB,
     account_id: &str,
