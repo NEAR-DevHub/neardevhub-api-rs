@@ -94,7 +94,7 @@ async fn get_proposals(
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
     if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(60).num_nanoseconds().unwrap()
+        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
     {
         update_nearblocks_data(
             db.inner(),
@@ -127,7 +127,7 @@ async fn get_proposal_with_all_snapshots(
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
     if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(60).num_nanoseconds().unwrap()
+        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
     {
         update_nearblocks_data(
             db.inner(),
