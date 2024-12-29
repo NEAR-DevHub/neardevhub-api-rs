@@ -312,13 +312,17 @@ fn test_cors_configuration() {
     let client = Client::tracked(super::rocket()).expect("valid Rocket instance");
 
     // Test allowed origin
-    let response = client
-        .options("/")
+    let res = client
+        .get("/")
         .header(Header::new("Origin", "http://localhost:3000"))
-        .header(Header::new("Access-Control-Request-Method", "GET"))
         .dispatch();
-    assert_eq!(response.status(), Status::Ok);
-    assert!(response
+    assert_eq!(
+        res.status(),
+        Status::Ok,
+        "Response should be Ok 200 but is {:?}",
+        res.status()
+    );
+    assert!(res
         .headers()
         .get("Access-Control-Allow-Origin")
         .next()
@@ -326,12 +330,17 @@ fn test_cors_configuration() {
 
     // Test disallowed origin
     let response = client
-        .options("/")
+        .get("/")
         .header(Header::new("Origin", "http://disallowed-origin.com"))
         .header(Header::new("Access-Control-Request-Method", "GET"))
         .dispatch();
 
-    assert_eq!(response.status(), Status::NoContent);
+    assert_eq!(
+        response.status(),
+        Status::Forbidden,
+        "Response should be Forbidden 403 but is {:?}",
+        response.status()
+    );
 }
 
 #[test]
