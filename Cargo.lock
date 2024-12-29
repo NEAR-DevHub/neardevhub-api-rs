@@ -2201,14 +2201,14 @@ dependencies = [
 
 [[package]]
 name = "near-api"
-version = "0.2.1"
-source = "git+https://github.com/near/near-api-rs#cd99c1ab74f2dbdc9ed785af7578f3609ea02c33"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a97c776b376cf7712e5e8942c0bf729baf05e939505ed33021f82e6b3e6baad"
 dependencies = [
  "async-trait",
  "bip39",
  "borsh",
  "bs58 0.4.0",
- "derive_more",
  "ed25519-dalek",
  "futures",
  "keyring",
@@ -2227,7 +2227,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "serde_with",
  "slipped10",
  "thiserror 1.0.69",
  "tokio",
