@@ -33,6 +33,7 @@ near-jsonrpc-client = "0.14.0"
 regex = "1.11.1"
 base64 = "0.22.1"
 futures = "0.3.31"
+borsh = "1.5.3"
 
 [features]
 default = ["workspaces"]
