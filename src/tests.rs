@@ -1,6 +1,7 @@
 use futures::future::join_all;
 use near_api::prelude::Contract;
 
+use crate::rpc_service::RpcService;
 use crate::{db::db_types::ProposalWithLatestSnapshotView, types::PaginatedResponse, Env};
 use crate::{separate_number_and_text, timestamp_to_date_string};
 use near_sdk::AccountId;
@@ -110,66 +111,108 @@ async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
 
 #[rocket::async_test]
 async fn test_all_proposals_are_indexed() {
+    use near_sdk::AccountId;
     use reqwest;
     use serde_json::Value;
+    use std::collections::HashMap;
 
-    let urls = [
-        "https://devhub-cache-api-rs.fly.dev/proposals",
-        "https://infra-cache-api-rs.fly.dev/proposals",
-        "https://events-cache-api-rs.fly.dev/proposals",
+    let contract_strings = vec![
+        "devhub.near",
+        "infrastructure-committee.near",
+        "events-committee.near",
     ];
 
-    // Create a reqwest client
-    let client = reqwest::Client::new();
-
-    // Make the HTTP request to the deployed API
-    let response = client
-        .get(urls[2])
-        .send()
-        .await
-        .expect("Failed to get response");
-
-    // Ensure the request was successful
-    assert!(response.status().is_success());
-
-    // Parse the response body as JSON
-    let result: Value = response
-        .json()
-        .await
-        .expect("Failed to parse response as JSON");
-
-    println!("Result: {:?}", result);
-
-    // Extract total count and records
-    let total = result["total_records"]
-        .as_i64()
-        .expect("Failed to get total count");
-
-    let records = result["records"]
-        .as_array()
-        .expect("Failed to get records array");
-
-    // Ensure we have records
-    assert!(!records.is_empty(), "No records found");
-
-    // Get the last proposal ID
-    let last_proposal = records.first().expect("Failed to get last record");
-
-    let last_id = last_proposal["proposal_id"]
-        .as_i64()
-        .expect("Failed to get proposal_id");
-
-    // Compare the last ID with the total count
-    // They should be equal if all proposals are properly indexed
-    assert_eq!(
-        last_id,
-        total - 1,
-        "Last proposal ID ({}) doesn't match total count ({})",
-        last_id,
-        total - 1
+    let mut map = HashMap::new();
+    map.insert(
+        "devhub.near",
+        "https://devhub-cache-api-rs.fly.dev/proposals",
+    );
+    map.insert(
+        "infrastructure-committee.near",
+        "https://infra-cache-api-rs.fly.dev/proposals",
+    );
+    map.insert(
+        "events-committee.near",
+        "https://events-cache-api-rs.fly.dev/proposals",
     );
 
-    eprintln!("Total count: {}, Last ID: {}", total, last_id);
+    for contract_string in contract_strings {
+        let account_id = contract_string.parse::<AccountId>().unwrap();
+        let url = *map.get(contract_string).expect("Contract string not found");
+
+        // Create a reqwest client
+        let client = reqwest::Client::new();
+
+        // Make the HTTP request to the deployed API
+        let response = client
+            .get(url)
+            .send()
+            .await
+            .expect("Failed to get response");
+
+        // Ensure the request was successful
+        assert!(response.status().is_success());
+
+        // Parse the response body as JSON
+        let result: Value = response
+            .json()
+            .await
+            .expect("Failed to parse response as JSON");
+
+        println!("Result for {}: {:?}", contract_string, result);
+
+        // Extract total count and records
+        let total = result["total_records"]
+            .as_i64()
+            .expect("Failed to get total count");
+
+        let records = result["records"]
+            .as_array()
+            .expect("Failed to get records array");
+
+        // Ensure we have records
+        assert!(!records.is_empty(), "No records found");
+
+        // Get the last proposal ID
+        let last_proposal = records.first().expect("Failed to get last record");
+
+        let last_id_api = last_proposal["proposal_id"]
+            .as_i64()
+            .expect("Failed to get proposal_id");
+
+        // rpc service
+        let rpc_service = RpcService::new(&account_id);
+
+        // Get all proposal ids
+        let proposal_ids = rpc_service.get_all_proposal_ids().await;
+        let proposal_ids = proposal_ids.unwrap();
+        let total_ids_rpc = proposal_ids.len() as i64;
+        let last_id_rpc = proposal_ids.last().copied().unwrap();
+        assert_eq!(
+            last_id_rpc, last_id_api as i32,
+            "Last proposal ID from the RPC {:?} doesn't match the API {:?} on contract {:?}",
+            last_id_rpc, last_id_api, contract_string
+        );
+
+        // Compare the last ID with the total count
+        // They should be equal if all proposals are properly indexed
+        assert_eq!(
+            last_id_api,
+            total - 1,
+            "Last proposal ID from the API ({}) doesn't match total count ({}) on contract {:?}",
+            last_id_api,
+            total - 1,
+            contract_string
+        );
+
+        assert_eq!(
+            total_ids_rpc, total,
+            "Total count from the RPC {:?} doesn't match the API {:?} on contract {:?}",
+            total_ids_rpc, total, contract_string
+        );
+
+        eprintln!("Total count: {}, Last ID: {}", total, last_id_api);
+    }
 }
 
 #[test]
