@@ -8,20 +8,10 @@ use near_sdk::AccountId;
 use serde_json::{json, Value};
 
 /**
- * Test Nearblocks mocked transactions
+ * Test that the proposal ids are continuous, and the name and status matches
  */
-
-/**
- * Search Proposals
- * Get Proposals
- * Get Proposal Snapshots
- * Search RFPs
- * Get RFPs
- * Get RFP Snapshots
- */
-
 #[rocket::async_test]
-async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
+async fn test_proposal_ids_continuous_name_status_matches() {
     use rocket::local::asynchronous::Client;
 
     let client = Client::tracked(super::rocket())
@@ -46,7 +36,7 @@ async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
         result
     };
 
-    assert_eq!(result.records.len(), 50);
+    assert_eq!(result.records.len(), 50, "Result records should be 50");
 
     eprintln!(
         "Results {:?}",
