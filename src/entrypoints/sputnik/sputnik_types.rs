@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 pub type OldAccountId = String;
 use near_sdk::json_types::Base64VecU8;
 use std::cmp::min;
+use std::fmt;
 
 use super::policy::VersionedPolicy;
 
@@ -220,7 +221,7 @@ impl WeightOrRatio {
     }
 }
 
-/// How the voting policy votes get weigthed.
+/// How the voting policy votes get weighted.
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, PartialEq)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug))]
 #[serde(crate = "near_sdk::serde")]
@@ -296,16 +297,16 @@ pub enum ProposalStatus {
     Failed,
 }
 
-impl ToString for ProposalStatus {
-    fn to_string(&self) -> String {
+impl fmt::Display for ProposalStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ProposalStatus::InProgress => "InProgress".to_string(),
-            ProposalStatus::Approved => "Approved".to_string(),
-            ProposalStatus::Rejected => "Rejected".to_string(),
-            ProposalStatus::Removed => "Removed".to_string(),
-            ProposalStatus::Expired => "Expired".to_string(),
-            ProposalStatus::Moved => "Moved".to_string(),
-            ProposalStatus::Failed => "Failed".to_string(),
+            ProposalStatus::InProgress => write!(f, "InProgress"),
+            ProposalStatus::Approved => write!(f, "Approved"),
+            ProposalStatus::Rejected => write!(f, "Rejected"),
+            ProposalStatus::Removed => write!(f, "Removed"),
+            ProposalStatus::Expired => write!(f, "Expired"),
+            ProposalStatus::Moved => write!(f, "Moved"),
+            ProposalStatus::Failed => write!(f, "Failed"),
         }
     }
 }

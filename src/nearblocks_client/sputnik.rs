@@ -81,16 +81,6 @@ pub async fn handle_add_proposal(
     db: &State<DB>,
     contract: &AccountId,
 ) -> Result<(), Status> {
-    let action = transaction
-        .actions
-        .as_ref()
-        .and_then(|actions| actions.first())
-        .ok_or(Status::InternalServerError)?;
-    let json_args = action.args.clone();
-    let args: AddProposalArgs = serde_json::from_str(&json_args.unwrap_or_default()).unwrap();
-
-    println!("Args: {:?}", args);
-
     let rpc_service = RpcService::new(contract);
 
     // get last proposal id
@@ -135,6 +125,7 @@ pub async fn handle_add_proposal(
     };
 
     println!("Proposal: {:?}", daop.id);
+    println!("Proposal description: {:?}", daop.proposal.description);
 
     let proposal_action = decode_proposal_description("isStakeRequest", &daop.proposal.description); // TODO check v1 isStakeRequest as well
 
@@ -153,7 +144,7 @@ pub async fn handle_add_proposal(
         submission_time: daop.proposal.submission_time.0 as i64,
         vote_counts: serde_json::to_value(daop.proposal.vote_counts).unwrap(),
         votes: serde_json::to_value(&daop.proposal.votes).unwrap(),
-        total_votes: daop.proposal.votes.len() as i64,
+        total_votes: daop.proposal.votes.len() as i32,
         dao_instance: contract.to_string(),
         proposal_action,
         tx_timestamp: transaction.block_timestamp.parse::<i64>().unwrap(),
@@ -167,6 +158,11 @@ pub async fn handle_add_proposal(
             eprintln!("Failed to insert transactions {}: {:?}", transaction.id, e);
             Status::InternalServerError
         })?;
+
+    tx.commit().await.map_err(|e| {
+        eprintln!("Failed to commit transaction: {:?}", e);
+        Status::InternalServerError
+    })?;
 
     println!("Inserted proposal snapshot {}", daop.id);
 
@@ -229,7 +225,7 @@ pub async fn handle_act_proposal(
             submission_time: dao_proposal.proposal.submission_time.0 as i64,
             vote_counts: serde_json::to_value(dao_proposal.proposal.vote_counts).unwrap(),
             votes: serde_json::to_value(&dao_proposal.proposal.votes).unwrap(),
-            total_votes: dao_proposal.proposal.votes.len() as i64,
+            total_votes: dao_proposal.proposal.votes.len() as i32,
             dao_instance: contract.to_string(),
             proposal_action,
             tx_timestamp: transaction.block_timestamp.parse::<i64>().unwrap(),

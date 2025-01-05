@@ -902,48 +902,140 @@ impl DB {
 
     pub async fn upsert_dao_proposal_snapshot(
         tx: &mut Transaction<'static, Postgres>,
-        record: SputnikProposalSnapshotRecord,
+        sputnik_proposal: SputnikProposalSnapshotRecord,
     ) -> anyhow::Result<()> {
-        let sql = r#"
-          INSERT INTO dao_proposals (description, id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-          ON CONFLICT (id) DO UPDATE SET
-            description = $1,
-            kind = $3,
-            proposer = $4,
-            status = $5,
-            submission_time = $6,
-            vote_counts = $7,
-            votes = $8,
-            total_votes = $9,
-            dao_instance = $10,
-            proposal_action = $11,
-            tx_timestamp = $12,
-            hash = $13
-        "#;
-        let result = sqlx::query(sql)
-            .bind(record.description)
-            .bind(record.id)
-            .bind(record.kind)
-            .bind(record.proposer)
-            .bind(record.status)
-            .bind(record.submission_time)
-            .bind(record.vote_counts)
-            .bind(record.votes)
-            .bind(record.total_votes)
-            .bind(record.dao_instance)
-            .bind(record.proposal_action)
-            .bind(record.tx_timestamp)
-            .bind(record.hash)
-            .execute(tx.as_mut())
+        // JSONB fields
+        let kind = match serde_json::to_value(sputnik_proposal.kind) {
+            Ok(value) => value,
+            Err(e) => {
+                eprintln!("Error converting kind to JSON: {:?}", e);
+                return Err(e.into());
+            }
+        };
+
+        let vote_counts = match serde_json::to_value(sputnik_proposal.vote_counts) {
+            Ok(value) => value,
+            Err(e) => {
+                eprintln!("Error converting vote_counts to JSON: {:?}", e);
+                return Err(e.into());
+            }
+        };
+
+        let votes = match serde_json::to_value(&sputnik_proposal.votes) {
+            Ok(value) => value,
+            Err(e) => {
+                eprintln!("Error converting votes to JSON: {:?}", e);
+                return Err(e.into());
+            }
+        };
+
+        // Attempt to update the existing record
+        let update_result = sqlx::query!(
+            r#"
+            UPDATE dao_proposals SET
+                description = $1,
+                kind = $2,
+                proposer = $3,
+                status = $4,
+                submission_time = $5,
+                vote_counts = $6,
+                votes = $7,
+                total_votes = $8,
+                dao_instance = $9,
+                proposal_action = $10,
+                tx_timestamp = $11,
+                hash = $12
+            WHERE id = $13
+            RETURNING id
+            "#,
+            sputnik_proposal.description,
+            kind,
+            sputnik_proposal.proposer,
+            sputnik_proposal.status,
+            sputnik_proposal.submission_time,
+            vote_counts,
+            votes,
+            sputnik_proposal.total_votes as i32,
+            sputnik_proposal.dao_instance,
+            sputnik_proposal.proposal_action,
+            sputnik_proposal.tx_timestamp,
+            sputnik_proposal.hash,
+            sputnik_proposal.id as i32
+        )
+        .fetch_optional(tx.as_mut())
+        .await?;
+
+        if let Some(record) = update_result {
+            println!("Updated dao proposal snapshot: {:?}", record.id);
+            Ok(())
+        } else {
+            println!("Inserting description: {:?}", sputnik_proposal.description);
+            println!("Inserting id: {:?}", sputnik_proposal.id);
+            println!("Inserting kind: {:?}", kind);
+            println!("Inserting proposer: {:?}", sputnik_proposal.proposer);
+            println!("Inserting status: {:?}", sputnik_proposal.status);
+            println!(
+                "Inserting submission_time: {:?}",
+                sputnik_proposal.submission_time
+            );
+            println!("Inserting vote_counts: {:?}", vote_counts);
+            println!("Inserting votes: {:?}", sputnik_proposal.votes);
+            println!("Inserting total_votes: {:?}", sputnik_proposal.total_votes);
+            println!(
+                "Inserting dao_instance: {:?}",
+                sputnik_proposal.dao_instance
+            );
+            println!(
+                "Inserting proposal_action: {:?}",
+                sputnik_proposal.proposal_action
+            );
+            println!(
+                "Inserting tx_timestamp: {:?}",
+                sputnik_proposal.tx_timestamp
+            );
+            println!("Inserting hash: {:?}", sputnik_proposal.hash);
+            // If no rows were updated, insert a new record
+            let rec = sqlx::query!(
+                r#"
+                INSERT INTO dao_proposals (
+                    description, id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+                )
+                ON CONFLICT (id) DO NOTHING
+                RETURNING id
+                "#,
+                sputnik_proposal.description,
+                sputnik_proposal.id as i32,
+                serde_json::Value::String("".to_string()), // kind: 
+                sputnik_proposal.proposer,
+                sputnik_proposal.status,
+                sputnik_proposal.submission_time,
+                serde_json::Value::String("".to_string()), // vote_counts: 
+                serde_json::Value::String("".to_string()), // votes: 
+                sputnik_proposal.total_votes as i32,
+                sputnik_proposal.dao_instance,
+                sputnik_proposal.proposal_action,
+                sputnik_proposal.tx_timestamp,
+                sputnik_proposal.hash
+            )
+            .fetch_optional(tx.as_mut())
             .await;
 
-        match result {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                eprintln!("Failed to insert dao proposal snapshot: {:?}", e);
-                Err(anyhow::anyhow!("Failed to insert dao proposal snapshot"))
+            match rec {
+                Ok(Some(record)) => {
+                    println!("Inserted dao proposal snapshot: {:?}", record.id);
+                }
+                Ok(None) => {
+                    println!("No record inserted due to conflict or other issue.");
+                    eprintln!("No record inserted due to conflict or other issue.");
+                }
+                Err(e) => {
+                    eprintln!("Error inserting dao proposal snapshot: {:?}", e);
+                    return Err(anyhow::anyhow!("Failed to insert dao proposal snapshot"));
+                }
             }
+            Ok(())
         }
     }
 
@@ -972,6 +1064,7 @@ impl DB {
         *  AND ($2 IS NULL OR kind->>'key' ILIKE '%' || $2 || '%')
          AND ($3 IS NULL OR status->>'key' ILIKE '%' || $3 || '%')
         */
+        println!("where dao_instance: {:?}", dao_instance);
         let sql = format!(
             r#"
           SELECT *

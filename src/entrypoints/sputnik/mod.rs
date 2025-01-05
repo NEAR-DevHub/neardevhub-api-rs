@@ -1,6 +1,6 @@
 use crate::db::db_types::SputnikProposalSnapshotRecord;
 use crate::db::DB;
-use crate::nearblocks_client::transactions::update_nearblocks_data;
+use crate::nearblocks_client::transactions::update_dao_via_nearblocks;
 use crate::types::PaginatedResponse;
 use near_account_id::AccountId;
 use rocket::http::Status;
@@ -72,23 +72,18 @@ async fn get_dao_proposals(
         }
     };
 
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db
         .get_last_updated_info_for_contract(&contract)
         .await
         .unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(2).num_nanoseconds().unwrap()
-    {
-        update_nearblocks_data(
-            db.inner(),
-            &contract,
-            nearblocks_api_key.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    update_dao_via_nearblocks(
+        db.inner(),
+        &contract,
+        nearblocks_api_key.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     let (proposals, total) =
         fetch_dao_proposals(db, account_id, limit, order, offset, filters).await;

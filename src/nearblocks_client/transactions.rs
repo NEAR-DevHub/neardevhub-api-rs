@@ -98,6 +98,84 @@ pub async fn update_nearblocks_data(
     }
 }
 
+pub async fn update_dao_via_nearblocks(
+    db: &DB,
+    contract: &AccountId,
+    nearblocks_api_key: &str,
+    after_block: Option<i64>,
+) {
+    let nearblocks_client = nearblocks_client::ApiClient::new(nearblocks_api_key.to_string());
+
+    let (all_transactions, _) =
+        fetch_all_new_transactions(&nearblocks_client, contract, after_block).await;
+
+    println!("Total transactions fetched: {}", all_transactions.len());
+
+    let _ = nearblocks_client::transactions::process_dao_transactions(
+        &all_transactions,
+        db.into(),
+        contract,
+    )
+    .await;
+
+    if let Some(transaction) = all_transactions.last() {
+        let timestamp_nano = transaction.block_timestamp.parse::<i64>().unwrap();
+        let _ = db
+            .set_last_updated_info_for_contract(
+                contract,
+                timestamp_nano,
+                transaction.block.block_height,
+            )
+            .await;
+    }
+}
+
+pub async fn process_dao_transactions(
+    transactions: &[Transaction],
+    db: &State<DB>,
+    contract: &AccountId,
+) -> Result<(), Status> {
+    for transaction in transactions.iter() {
+        if let Some(action) = transaction
+            .actions
+            .as_ref()
+            .and_then(|actions| actions.first())
+        {
+            if !transaction.receipt_outcome.status {
+                eprintln!(
+                    "Proposal receipt outcome status is {:?}",
+                    transaction.receipt_outcome.status
+                );
+                // eprintln!("On transaction: {:?}", transaction);
+                continue;
+            }
+            let result = match action.method.as_deref().unwrap_or("") {
+                // TODO can't reuse this because the other contract has a function with the same name
+                "add_proposal" => {
+                    println!("add_proposal");
+                    handle_add_proposal(transaction.to_owned(), db, contract).await
+                }
+                // TODO: Uncomment this
+                // "act_proposal" => {
+                //     println!("act_proposal");
+                //     handle_act_proposal(transaction.to_owned(), db, contract).await
+                // }
+                _ => {
+                    if action.action == "FUNCTION_CALL" {
+                        println!("Unhandled method: {:?}", action.method.as_ref().unwrap());
+                    } else {
+                        println!("Unhandled action: {:?}", action.action);
+                    }
+                    continue;
+                }
+            };
+            result?;
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn process(
     transactions: &[Transaction],
     db: &State<DB>,
@@ -154,14 +232,6 @@ pub async fn process(
                     println!("set_rfp_block_height_callback");
                     handle_set_rfp_block_height_callback(transaction.to_owned(), db, contract).await
                 }
-                "add_proposal" => {
-                    println!("add_proposal");
-                    handle_add_proposal(transaction.to_owned(), db, contract).await
-                }
-                // "act_proposal" => {
-                //     println!("act_proposal");
-                //     handle_act_proposal(transaction.to_owned(), db, contract).await
-                // }
                 _ => {
                     if action.action == "FUNCTION_CALL" {
                         // println!("Unhandled method: {:?}", action.method.as_ref().unwrap());
