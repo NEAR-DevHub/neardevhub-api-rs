@@ -45,7 +45,7 @@ jobs:
           cargo build --verbose
           cargo run --verbose &
           sleep 5
-          curl http://localhost:8000/proposals
+          curl http://127.0.0.1:8080/proposals
         env:
           SQLX_OFFLINE: true
           CONTRACT: devhub.near
