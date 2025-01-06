@@ -7,16 +7,6 @@ use crate::{separate_number_and_text, timestamp_to_date_string};
 use near_sdk::AccountId;
 use serde_json::{json, Value};
 
-/**
- * Test that the proposal ids are continuous, and the name and status matches
- */
-
-/**
- * Test that if new proposals appear, they should also be added to the cache
- * Test that status changes are updated in the cache
- * Test that new comment block heights are registered
- */
-
 #[rocket::async_test]
 async fn test_new_proposals_appear_in_cache() {
     use rocket::local::asynchronous::Client;
