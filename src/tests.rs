@@ -190,9 +190,6 @@ async fn test_if_the_last_ten_will_get_indexed() {
         .unwrap();
 
     // get the last 10 proposals by their ids from the rpc service
-    // Map for last_ten_ids to get_proposal
-    // let proposal_map = last_ten_ids.iter().map(|id| (id, rpc_service.get_proposal(*id).await.unwrap())).collect::<HashMap<i32, ProposalWithLatestSnapshotView>>>();
-
     let proposals: Vec<Proposal> = futures::stream::iter(last_ten_ids)
         .then(|id| {
             let rpc_service = rpc_service.clone();
@@ -203,9 +200,6 @@ async fn test_if_the_last_ten_will_get_indexed() {
 
     assert_eq!(proposals.len(), limit);
     assert_eq!(result.records.len(), limit);
-
-    println!("proposal_map: {:?}", proposals);
-    eprintln!("proposal_map: {:?}", proposals);
 
     // Compare the last 10 proposals from the api with the rpc service
     for (record, proposal) in result.records.iter().zip(proposals.iter().rev()) {
