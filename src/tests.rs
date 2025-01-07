@@ -1,9 +1,13 @@
+use devhub_shared::proposal::Proposal;
 use futures::future::join_all;
-use near_api::prelude::Contract;
+use near_api::Contract;
 
+use crate::db::db_types::LastUpdatedInfo;
+use crate::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
 use crate::rpc_service::RpcService;
 use crate::{db::db_types::ProposalWithLatestSnapshotView, types::PaginatedResponse, Env};
 use crate::{separate_number_and_text, timestamp_to_date_string};
+use futures::StreamExt;
 use near_sdk::AccountId;
 use serde_json::{json, Value};
 
@@ -122,6 +126,90 @@ async fn test_proposal_ids_continuous_name_status_matches() {
             proposal["snapshot"]["timeline"]["status"],
             timeline["status"]
         );
+    }
+}
+
+#[rocket::async_test]
+async fn test_if_the_last_ten_will_get_indexed() {
+    // from env get the CONTRACT
+    let contract_string: String =
+        std::env::var("CONTRACT").unwrap_or_else(|_| "devhub.near".to_string());
+    let contract_account_id: AccountId = contract_string.parse().unwrap();
+
+    // get all proposal ids from the RPC service
+    let rpc_service = RpcService::new(&contract_account_id);
+    let proposal_ids = rpc_service.get_all_proposal_ids().await;
+    let proposal_ids = proposal_ids.unwrap();
+    let last_ten = proposal_ids.len() - 10;
+    let last_ten_ids = proposal_ids[last_ten..].to_vec();
+
+    eprintln!("last_ten_ids: {:?}", last_ten_ids);
+    // get the blockheight of the n - 10th proposal
+    let block_height = rpc_service
+        .get_proposal(last_ten_ids[0])
+        .await
+        .unwrap()
+        .block_height;
+
+    // get the last ten proposals from the api
+    use rocket::local::asynchronous::Client;
+
+    let client = Client::tracked(super::rocket())
+        .await
+        .expect("valid `Rocket`");
+
+    // set the block height to recent block so we won't index from the start
+    let set_block_height = block_height as i64 - BLOCK_HEIGHT_OFFSET;
+    let block_height_query = format!("/proposals/info/block/{}", set_block_height);
+    let _ = client.get(block_height_query).dispatch().await;
+
+    // check that the block height is set
+    let info = client
+        .get("/proposals/info/".to_string())
+        .dispatch()
+        .await
+        .into_json::<LastUpdatedInfo>()
+        .await
+        .unwrap();
+
+    assert_eq!(
+        info.after_block, set_block_height,
+        "Block height should be set to {:?} but is {:?}",
+        set_block_height, info.after_block
+    );
+
+    // get the last ten proposals from the api
+    let limit = 10;
+    let query = format!("/proposals?limit={}", limit);
+    let result = client
+        .get(query)
+        .dispatch()
+        .await
+        .into_json::<PaginatedResponse<ProposalWithLatestSnapshotView>>()
+        .await
+        .unwrap();
+
+    // get the last 10 proposals by their ids from the rpc service
+    // Map for last_ten_ids to get_proposal
+    // let proposal_map = last_ten_ids.iter().map(|id| (id, rpc_service.get_proposal(*id).await.unwrap())).collect::<HashMap<i32, ProposalWithLatestSnapshotView>>>();
+
+    let proposals: Vec<Proposal> = futures::stream::iter(last_ten_ids)
+        .then(|id| {
+            let rpc_service = rpc_service.clone();
+            async move { rpc_service.get_proposal(id).await.unwrap().data.into() }
+        })
+        .collect()
+        .await;
+
+    assert_eq!(proposals.len(), limit);
+    assert_eq!(result.records.len(), limit);
+
+    println!("proposal_map: {:?}", proposals);
+    eprintln!("proposal_map: {:?}", proposals);
+
+    // Compare the last 10 proposals from the api with the rpc service
+    for (record, proposal) in result.records.iter().zip(proposals.iter().rev()) {
+        assert_eq!(record.proposal_id, proposal.id as i32);
     }
 }
 
