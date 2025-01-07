@@ -1,4 +1,4 @@
-use devhub_shared::proposal::Proposal;
+use devhub_shared::proposal::{Proposal, VersionedProposal};
 use futures::future::join_all;
 use near_api::Contract;
 
@@ -131,39 +131,43 @@ async fn test_proposal_ids_continuous_name_status_matches() {
 
 #[rocket::async_test]
 async fn test_if_the_last_ten_will_get_indexed() {
-    // from env get the CONTRACT
-    let contract_string: String =
-        std::env::var("CONTRACT").unwrap_or_else(|_| "devhub.near".to_string());
-    let contract_account_id: AccountId = contract_string.parse().unwrap();
-
-    // get all proposal ids from the RPC service
-    let rpc_service = RpcService::new(&contract_account_id);
-    let proposal_ids = rpc_service.get_all_proposal_ids().await;
-    let proposal_ids = proposal_ids.unwrap();
-    let last_ten = proposal_ids.len() - 10;
-    let last_ten_ids = proposal_ids[last_ten..].to_vec();
-
-    eprintln!("last_ten_ids: {:?}", last_ten_ids);
-    // get the blockheight of the n - 10th proposal
-    let block_height = rpc_service
-        .get_proposal(last_ten_ids[0])
-        .await
-        .unwrap()
-        .block_height;
-
-    // get the last ten proposals from the api
     use rocket::local::asynchronous::Client;
 
     let client = Client::tracked(super::rocket())
         .await
         .expect("valid `Rocket`");
 
-    // set the block height to recent block so we won't index from the start
+    let contract_string: String =
+        std::env::var("CONTRACT").unwrap_or_else(|_| "devhub.near".to_string());
+    let contract_account_id: AccountId = contract_string.parse().unwrap();
+
+    // Get all proposal ids from the RPC service
+    let rpc_service = RpcService::new(&contract_account_id);
+    let proposal_ids = rpc_service.get_all_proposal_ids().await.unwrap();
+    let last_ten_ids: Vec<i32> = proposal_ids.iter().rev().take(10).cloned().collect();
+
+    // Get the last 10 proposals
+    let versioned_proposals: Vec<VersionedProposal> = futures::stream::iter(last_ten_ids)
+        .then(|id| {
+            let rpc_service = rpc_service.clone();
+            async move { rpc_service.get_proposal(id).await.unwrap().data }
+        })
+        .collect()
+        .await;
+
+    let proposals: Vec<Proposal> = versioned_proposals
+        .iter()
+        .map(|vp| Proposal::from((*vp).clone()))
+        .collect();
+
+    // Set the block height to a recent block so we won't index from the start
+    let block_height = proposals.last().unwrap().social_db_post_block_height;
+    eprintln!("block_height: {:?}", block_height);
     let set_block_height = block_height as i64 - BLOCK_HEIGHT_OFFSET;
     let block_height_query = format!("/proposals/info/block/{}", set_block_height);
     let _ = client.get(block_height_query).dispatch().await;
 
-    // check that the block height is set
+    // Check that the blockheight is set
     let info = client
         .get("/proposals/info/".to_string())
         .dispatch()
@@ -178,7 +182,9 @@ async fn test_if_the_last_ten_will_get_indexed() {
         set_block_height, info.after_block
     );
 
-    // get the last ten proposals from the api
+    eprintln!("after_block: {:?}", info.after_block);
+
+    // Get the last ten proposals from the API
     let limit = 10;
     let query = format!("/proposals?limit={}", limit);
     let result = client
@@ -189,21 +195,28 @@ async fn test_if_the_last_ten_will_get_indexed() {
         .await
         .unwrap();
 
-    // get the last 10 proposals by their ids from the rpc service
-    let proposals: Vec<Proposal> = futures::stream::iter(last_ten_ids)
-        .then(|id| {
-            let rpc_service = rpc_service.clone();
-            async move { rpc_service.get_proposal(id).await.unwrap().data.into() }
-        })
-        .collect()
-        .await;
-
     assert_eq!(proposals.len(), limit);
     assert_eq!(result.records.len(), limit);
 
-    // Compare the last 10 proposals from the api with the rpc service
-    for (record, proposal) in result.records.iter().zip(proposals.iter().rev()) {
-        assert_eq!(record.proposal_id, proposal.id as i32);
+    eprintln!(
+        "Proposal IDs RPC: {:?}",
+        proposals.iter().map(|p| p.id as i32).collect::<Vec<i32>>()
+    );
+    eprintln!(
+        "Proposal IDs API: {:?}",
+        result
+            .records
+            .iter()
+            .map(|r| r.proposal_id)
+            .collect::<Vec<i32>>()
+    );
+    // Compare the last 10 proposals from the API with the RPC
+    for (record, proposal) in result.records.iter().zip(proposals.iter()) {
+        assert_eq!(
+            record.proposal_id, proposal.id as i32,
+            "Proposal ID from the API {:?} doesn't match the RPC {:?} on contract {:?}",
+            record.proposal_id, proposal.id, contract_string
+        );
     }
 }
 
