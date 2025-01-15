@@ -15,15 +15,6 @@ async fn fetch_all_new_transactions(
     let mut all_transactions = Vec::new();
     let mut current_cursor = "".to_string();
 
-    // TODO remove
-    // if contract == "testing-astradao.sputnik-dao.near" {
-    //     // Read from file
-    //     let file_path = format!("transactions_{}.json", contract.to_string());
-    //     let json_data = std::fs::read_to_string(file_path).unwrap();
-    //     let transactions: Vec<Transaction> = serde_json::from_str(&json_data).unwrap();
-    //     return (transactions.into_iter().rev().collect(), "None".to_string());
-    // }
-
     loop {
         let response = match nearblocks_client
             .get_account_txns_by_pagination(
@@ -49,7 +40,11 @@ async fn fetch_all_new_transactions(
         );
 
         // Check if we've wrapped around or reached the end
-        if response.cursor.is_none() || contract == "testing-astradao.sputnik-dao.near" {
+        // TODO 157 Remove behind the || operator
+        if response.cursor.is_none()
+        // || (contract == "testing-astradao.sputnik-dao.near"
+        //     && all_transactions.len() + response.txns.len() >= 50)
+        {
             println!("Cursor has wrapped around, finished fetching transactions");
             all_transactions.extend(response.txns);
             current_cursor = "None".to_string();
@@ -58,11 +53,6 @@ async fn fetch_all_new_transactions(
 
         // Add transactions to our collection
         all_transactions.extend(response.txns);
-
-        // For testing purposes write to a json file
-        // let file_path = format!("transactions_{}.json", contract.to_string());
-        // let json_data = serde_json::to_string(&all_transactions).unwrap();
-        // std::fs::write(file_path, json_data).unwrap();
 
         // Update cursor for next iteration
         current_cursor = response.cursor.unwrap();
@@ -150,16 +140,14 @@ pub async fn process_dao_transactions(
                 continue;
             }
             let result = match action.method.as_deref().unwrap_or("") {
-                // TODO can't reuse this because the other contract has a function with the same name
                 "add_proposal" => {
                     println!("add_proposal");
                     handle_add_proposal(transaction.to_owned(), db, contract).await
                 }
-                // TODO: Uncomment this
-                // "act_proposal" => {
-                //     println!("act_proposal");
-                //     handle_act_proposal(transaction.to_owned(), db, contract).await
-                // }
+                "act_proposal" => {
+                    println!("act_proposal");
+                    handle_act_proposal(transaction.to_owned(), db, contract).await
+                }
                 _ => {
                     if action.action == "FUNCTION_CALL" {
                         println!("Unhandled method: {:?}", action.method.as_ref().unwrap());

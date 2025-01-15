@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO dao_proposals (\n                    description, id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash\n                ) VALUES (\n                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13\n                )\n                ON CONFLICT (id) DO NOTHING\n                RETURNING id\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int4",
+        "Jsonb",
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Jsonb",
+        "Jsonb",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "266232df023d2ef012e4b2330f383653bbc3736be9b3b149a456ba684cbac38f"
+}

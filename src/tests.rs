@@ -6,19 +6,6 @@ use crate::{separate_number_and_text, timestamp_to_date_string};
 use near_sdk::AccountId;
 use serde_json::{json, Value};
 
-/**
- * Test Nearblocks mocked transactions
- */
-
-/**
- * Search Proposals
- * Get Proposals
- * Get Proposal Snapshots
- * Search RFPs
- * Get RFPs
- * Get RFP Snapshots
- */
-
 #[rocket::async_test]
 async fn test_proposal_ids_are_continuous_and_name_and_status_matches() {
     use rocket::local::asynchronous::Client;

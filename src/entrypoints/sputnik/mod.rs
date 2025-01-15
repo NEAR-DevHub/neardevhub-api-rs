@@ -15,12 +15,14 @@ pub mod sputnik_types;
 
 #[derive(Clone, Debug, FromForm, ToSchema)]
 pub struct GetDaoProposalsFilters {
-    pub instance: Option<String>,
     pub proposer: Option<String>,
-    pub status: Option<String>,
     pub kind: Option<String>,
-    pub description: Option<String>,
-    pub proposal_action: Option<String>,
+    pub total_votes: Option<i64>,
+    pub status: Option<String>,
+    // TODO 157 proposal_action?
+    // pub proposal_action: Option<String>,
+    //TODO 157 description is for search
+    // pub description: Option<String>,
 }
 
 async fn fetch_dao_proposals(
@@ -116,13 +118,46 @@ async fn reset_dao_proposals(account_id: &str, db: &State<DB>) -> Result<(), Sta
     Ok(())
 }
 
+#[get("/proposals/<account_id>/resetandtest")]
+async fn reset_and_test(
+    account_id: &str,
+    db: &State<DB>,
+    nearblocks_api_key: &State<String>,
+) -> Json<PaginatedResponse<SputnikProposalSnapshotRecord>> {
+    let contract = match AccountId::from_str(account_id) {
+        Ok(contract) => contract,
+        Err(_) => {
+            eprintln!("Invalid account id: {}", account_id);
+            AccountId::from_str("testing-astradao.sputnik-dao.near").unwrap()
+        }
+    };
+
+    db.remove_all_dao_proposals(account_id).await.unwrap();
+
+    update_dao_via_nearblocks(db.inner(), &contract, nearblocks_api_key.inner(), Some(0)).await;
+
+    let (proposals, total) = fetch_dao_proposals(db, account_id, 10, "id_desc", 0, None).await;
+
+    Json(PaginatedResponse::new(
+        proposals.into_iter().map(Into::into).collect(),
+        1,
+        10,
+        total.try_into().unwrap(),
+    ))
+}
+
 pub fn stage() -> rocket::fairing::AdHoc {
     rocket::fairing::AdHoc::on_ignite("Rfp Stage", |rocket| async {
         println!("Rfp stage on ignite!");
 
         rocket.mount(
             "/dao/",
-            rocket::routes![set_block, get_dao_proposals, reset_dao_proposals],
+            rocket::routes![
+                set_block,
+                get_dao_proposals,
+                reset_dao_proposals,
+                reset_and_test
+            ],
         )
     })
 }

@@ -929,6 +929,18 @@ impl DB {
             }
         };
 
+        // Determine the kind_key based on the type of kind
+        let kind = match kind {
+            serde_json::Value::Object(obj) => {
+                serde_json::Value::String(obj.keys().next().unwrap().to_string())
+            }
+            serde_json::Value::String(s) => serde_json::Value::String(s.clone()),
+            _ => {
+                eprintln!("Unexpected kind type: {:?}", kind);
+                serde_json::Value::String("Error".to_string())
+            }
+        };
+
         // Attempt to update the existing record
         let update_result = sqlx::query!(
             r#"
@@ -1007,12 +1019,12 @@ impl DB {
                 "#,
                 sputnik_proposal.description,
                 sputnik_proposal.id as i32,
-                serde_json::Value::String("".to_string()), // kind: 
+                kind,
                 sputnik_proposal.proposer,
                 sputnik_proposal.status,
                 sputnik_proposal.submission_time,
-                serde_json::Value::String("".to_string()), // vote_counts: 
-                serde_json::Value::String("".to_string()), // votes: 
+                vote_counts,
+                votes,
                 sputnik_proposal.total_votes as i32,
                 sputnik_proposal.dao_instance,
                 sputnik_proposal.proposal_action,
@@ -1056,22 +1068,21 @@ impl DB {
         };
 
         let kind = filters.as_ref().and_then(|f| f.kind.as_ref());
-        // let total_votes = filters.as_ref().and_then(|f| f.total_votes.as_ref());
+        let total_votes = filters.as_ref().and_then(|f| f.total_votes.as_ref());
         let status = filters.as_ref().and_then(|f| f.status.as_ref());
+        let proposer = filters.as_ref().and_then(|f| f.proposer.as_ref());
 
-        /*
-         * TODO add filters
-        *  AND ($2 IS NULL OR kind->>'key' ILIKE '%' || $2 || '%')
-         AND ($3 IS NULL OR status->>'key' ILIKE '%' || $3 || '%')
-        */
-        println!("where dao_instance: {:?}", dao_instance);
         let sql = format!(
             r#"
           SELECT *
           FROM dao_proposals
           WHERE dao_instance = $1
+          AND ($2 IS NULL OR kind::text ILIKE '%' || $2 || '%')
+          AND ($3 IS NULL OR status::text ILIKE '%' || $3 || '%')
+          AND ($4 IS NULL OR total_votes = $4)
+          AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
           ORDER BY {}
-          LIMIT $4 OFFSET $5
+          LIMIT $6 OFFSET $7
         "#,
             order_clause,
         );
@@ -1080,24 +1091,29 @@ impl DB {
             .bind(dao_instance)
             .bind(kind)
             .bind(status)
+            .bind(total_votes)
+            .bind(proposer)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.0)
             .await?;
 
-        /*
-        AND ($2 IS NULL OR kind->>'key' ILIKE '%' || $2 || '%')
-        AND ($3 IS NULL OR status->>'key' ILIKE '%' || $3 || '%') */
         let count_sql = r#"
             SELECT COUNT(*)
             FROM dao_proposals
             WHERE dao_instance = $1
+            AND ($2 IS NULL OR kind::text ILIKE '%' || $2 || '%')
+            AND ($3 IS NULL OR status::text ILIKE '%' || $3 || '%')
+            AND ($4 IS NULL OR total_votes = $4)
+            AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
         "#;
 
         let total_count = sqlx::query_scalar::<_, i64>(count_sql)
             .bind(dao_instance)
             .bind(kind)
             .bind(status)
+            .bind(total_votes)
+            .bind(proposer)
             .fetch_one(&self.0)
             .await?;
 

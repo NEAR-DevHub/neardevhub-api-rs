@@ -1,15 +1,19 @@
+use super::types::BLOCK_HEIGHT_OFFSET;
 use crate::db::db_types::SputnikProposalSnapshotRecord;
 use crate::db::DB;
-use crate::entrypoints::sputnik::sputnik_types::{Action, ProposalKind};
+use crate::entrypoints::sputnik::sputnik_types::{
+    Action, Proposal, ProposalKind, ProposalOutput, ProposalStatus,
+};
 use crate::nearblocks_client::types::Transaction;
-use crate::rpc_service::RpcService; // BLOCK_HEIGHT_OFFSET
+use crate::rpc_service::RpcService;
 use near_account_id::AccountId;
+use near_sdk::json_types::U64;
 use regex::Regex;
 use rocket::{http::Status, State};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use super::types::BLOCK_HEIGHT_OFFSET;
+use std::collections::HashMap;
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AddProposalArgs {
@@ -22,7 +26,7 @@ pub struct ProposalInput {
     pub kind: ProposalKind,
 }
 
-#[derive(Serialize, Deserialize)] // Clone
+#[derive(Serialize, Deserialize, Debug)] // Clone
 pub struct ActProposalArgs {
     pub id: i64,
     pub action: Action,
@@ -30,10 +34,7 @@ pub struct ActProposalArgs {
 }
 
 fn parse_key_to_readable_format(key: &str) -> String {
-    // Replace underscores with spaces
     let key = key.replace('_', " ");
-
-    // Add spaces between camelCase or PascalCase words
     let re = Regex::new(r"([a-z])([A-Z])").unwrap();
     let key = re.replace_all(&key, "$1 $2");
 
@@ -50,30 +51,38 @@ fn parse_key_to_readable_format(key: &str) -> String {
         .join(" ")
 }
 
-fn decode_proposal_description(key: &str, description: &str) -> String {
+fn decode_proposal_description(description: &str) -> String {
     // Try to parse as JSON
     if let Ok(parsed_data) = serde_json::from_str::<Value>(description) {
-        if let Some(value) = parsed_data.get(key) {
-            return value.as_str().unwrap_or("parsed error 1.").to_string();
+        if let Some(value) = parsed_data.get("proposal_action") {
+            return value.to_string();
+        }
+        if let Some(value) = parsed_data.get("isStakeRequest") {
+            println!("isStakeRequest: {:?}", value);
+            // Bool(true)
+            return value.to_string();
         }
     }
 
     // Handle as markdown
-    let markdown_key = parse_key_to_readable_format(key);
-    let re = Regex::new(r"^\* (.+): (.+)$").unwrap();
+    let keys = ["proposal_action", "isStakeRequest"];
+    for key in &keys {
+        let markdown_key = parse_key_to_readable_format(key);
+        let re = Regex::new(r"^\* (.+): (.+)$").unwrap();
 
-    for line in description.split("<br>") {
-        if let Some(captures) = re.captures(line) {
-            let current_key = captures.get(1).map_or("", |m| m.as_str());
-            let value = captures.get(2).map_or("", |m| m.as_str());
+        for line in description.split("<br>") {
+            if let Some(captures) = re.captures(line) {
+                let current_key = captures.get(1).map_or("", |m| m.as_str());
+                let value = captures.get(2).map_or("", |m| m.as_str());
 
-            if current_key == markdown_key {
-                return value.trim().to_string();
+                if current_key == markdown_key {
+                    return value.trim().to_string();
+                }
             }
         }
     }
 
-    "key not found".to_string() // Return None if key not found
+    "null".to_string()
 }
 
 pub async fn handle_add_proposal(
@@ -82,30 +91,52 @@ pub async fn handle_add_proposal(
     contract: &AccountId,
 ) -> Result<(), Status> {
     let rpc_service = RpcService::new(contract);
-
-    // get last proposal id
-    let last_proposal_id = match rpc_service
-        .get_last_dao_proposal_id_on_block(
-            transaction.receipt_block.block_height + BLOCK_HEIGHT_OFFSET,
-        )
+    /*
+    get_last_proposal_id actually returns the number of proposals starting from 0.
+    https://github.com/near-daos/sputnik-dao-contract/blob/3d568f9517a8c7a6510786d978bb25b180501841/sputnikdao2/src/proposals.rs#L532
+    */
+    let proposal_id = match rpc_service
+        .get_last_proposal_id_on_block(transaction.receipt_block.block_height + BLOCK_HEIGHT_OFFSET)
         .await
     {
-        Ok(last_proposal_id) => last_proposal_id.data - 1, // TODO TEST
+        Ok(last_proposal_id) => last_proposal_id.data - 1,
         Err(e) => {
             eprintln!("Failed to get last dao proposal id on block: {:?}", e);
             return Err(Status::InternalServerError);
         }
     };
 
-    println!("Last proposal id: {}", last_proposal_id);
+    println!("Last proposal id: {}", proposal_id);
 
-    // TODO either check get the last dao proposal id on block or just add 1 to the id.
-    // on block => BLOCK_HEIGHT_OFFSET ?
-    // let proposal_id = last_proposal_id + 1;
+    let add_proposal_action = transaction
+        .actions
+        .as_ref()
+        .and_then(|actions| actions.first())
+        .ok_or(Status::InternalServerError)?;
+    let add_proposal_args: AddProposalArgs = serde_json::from_str(
+        add_proposal_action
+            .args
+            .as_ref()
+            .unwrap_or(&String::default()),
+    )
+    .unwrap();
+
+    let proposal_output = ProposalOutput {
+        id: proposal_id.try_into().unwrap(),
+        proposal: Proposal {
+            proposer: AccountId::from_str(transaction.predecessor_account_id.as_str()).unwrap(),
+            description: add_proposal_args.proposal.description,
+            kind: add_proposal_args.proposal.kind,
+            status: ProposalStatus::Removed,
+            vote_counts: HashMap::new(),
+            votes: HashMap::new(),
+            submission_time: U64::from(transaction.receipt_block.block_height as u64),
+        },
+    };
 
     let daop = match rpc_service
         .get_dao_proposal_on_block(
-            last_proposal_id,
+            proposal_id,
             transaction.receipt_block.block_height + BLOCK_HEIGHT_OFFSET,
         )
         .await
@@ -116,18 +147,15 @@ pub async fn handle_add_proposal(
                 "Failed to get dao proposal on block: {:?}, block_height: {}",
                 e, transaction.receipt_block.block_height
             );
-            println!(
-                "Skipping proposal, probably deleted, id:{}",
-                last_proposal_id
-            );
-            return Ok(());
+            println!("Skipping proposal, probably deleted, id: {}", proposal_id);
+            proposal_output
         }
     };
 
     println!("Proposal: {:?}", daop.id);
     println!("Proposal description: {:?}", daop.proposal.description);
 
-    let proposal_action = decode_proposal_description("isStakeRequest", &daop.proposal.description); // TODO check v1 isStakeRequest as well
+    let proposal_action = decode_proposal_description(&daop.proposal.description);
 
     println!("Proposal action: {}", proposal_action);
     let mut tx = db.begin().await.map_err(|e| {
@@ -135,15 +163,30 @@ pub async fn handle_add_proposal(
         Status::InternalServerError
     })?;
 
+    let kind = serde_json::to_value(daop.proposal.kind).unwrap_or_else(|e| {
+        eprintln!("Failed to serialize proposal kind: {:?}", e);
+        serde_json::Value::Null
+    });
+
+    let vote_counts = serde_json::to_value(daop.proposal.vote_counts).unwrap_or_else(|e| {
+        eprintln!("Failed to serialize vote counts: {:?}", e);
+        serde_json::Value::Null
+    });
+
+    let votes = serde_json::to_value(&daop.proposal.votes).unwrap_or_else(|e| {
+        eprintln!("Failed to serialize votes: {:?}", e);
+        serde_json::Value::Null
+    });
+
     let record = SputnikProposalSnapshotRecord {
         description: daop.proposal.description,
-        id: daop.id.try_into().unwrap(),
-        kind: serde_json::to_value(daop.proposal.kind).unwrap(),
+        id: daop.id as i32,
+        kind,
         proposer: daop.proposal.proposer.to_string(),
         status: daop.proposal.status.to_string(),
         submission_time: daop.proposal.submission_time.0 as i64,
-        vote_counts: serde_json::to_value(daop.proposal.vote_counts).unwrap(),
-        votes: serde_json::to_value(&daop.proposal.votes).unwrap(),
+        vote_counts,
+        votes,
         total_votes: daop.proposal.votes.len() as i32,
         dao_instance: contract.to_string(),
         proposal_action,
@@ -151,7 +194,7 @@ pub async fn handle_add_proposal(
         hash: transaction.transaction_hash,
     };
 
-    println!("Inserting proposal snapshot {:?}", record);
+    // println!("Inserting proposal snapshot {:?}", record);
     DB::upsert_dao_proposal_snapshot(&mut tx, record)
         .await
         .map_err(|e| {
@@ -169,7 +212,6 @@ pub async fn handle_add_proposal(
     Ok(())
 }
 
-// TODO: instead of arguments parsing get the updated version of the proposal from the contract via the RPC
 pub async fn handle_act_proposal(
     transaction: Transaction,
     db: &State<DB>,
@@ -186,7 +228,6 @@ pub async fn handle_act_proposal(
     let args: ActProposalArgs = serde_json::from_str(&json_args.unwrap_or_default()).unwrap();
 
     let proposal_id = args.id;
-    // let action = args.action;
 
     let rpc_service = RpcService::new(contract);
 
@@ -199,36 +240,67 @@ pub async fn handle_act_proposal(
     {
         Ok(dao_proposal) => dao_proposal,
         Err(e) => {
-            eprintln!("Failed to get dao proposal: {:?}", e);
-            // TODO
-            println!("Skipping proposal {:?}", proposal_id);
-            return Ok(());
+            eprintln!(
+                "Failed to get proposal in act_proposal with id: {}, {:?}",
+                proposal_id, e
+            );
+            return Err(Status::InternalServerError);
         }
     };
 
-    let proposal_action =
-        decode_proposal_description("proposal_action", &dao_proposal.proposal.description); // TODO check v1 isStakeRequest as well
+    println!("act_proposal proposal: {:?}", dao_proposal.id);
+    println!(
+        "act_proposal proposal description: {:?}",
+        dao_proposal.proposal.description
+    );
+
+    println!(
+        "act_proposal proposal vote_counts: {:?}",
+        dao_proposal.proposal.vote_counts
+    );
+    println!(
+        "act_proposal proposal votes: {:?}",
+        dao_proposal.proposal.votes
+    );
+
+    let proposal_action = decode_proposal_description(&dao_proposal.proposal.description);
 
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
         Status::InternalServerError
     })?;
 
+    let kind = serde_json::to_value(dao_proposal.proposal.kind).unwrap_or_else(|e| {
+        eprintln!("Failed to serialize proposal kind: {:?}", e);
+        serde_json::Value::Null // Fallback value
+    });
+
+    let vote_counts = serde_json::to_value(dao_proposal.proposal.vote_counts).unwrap_or_else(|e| {
+        eprintln!("Failed to serialize vote counts: {:?}", e);
+        serde_json::Value::Null // Fallback value
+    });
+
+    let votes = serde_json::to_value(&dao_proposal.proposal.votes).unwrap_or_else(|e| {
+        eprintln!("Failed to serialize votes: {:?}", e);
+        serde_json::Value::Null // Fallback value
+    });
     DB::upsert_dao_proposal_snapshot(
         &mut tx,
         SputnikProposalSnapshotRecord {
             description: dao_proposal.proposal.description,
             id: dao_proposal.id.try_into().unwrap(),
-            kind: serde_json::to_value(dao_proposal.proposal.kind).unwrap(),
+            kind,
             proposer: dao_proposal.proposal.proposer.to_string(),
             status: dao_proposal.proposal.status.to_string(),
             submission_time: dao_proposal.proposal.submission_time.0 as i64,
-            vote_counts: serde_json::to_value(dao_proposal.proposal.vote_counts).unwrap(),
-            votes: serde_json::to_value(&dao_proposal.proposal.votes).unwrap(),
+            vote_counts,
+            votes,
             total_votes: dao_proposal.proposal.votes.len() as i32,
             dao_instance: contract.to_string(),
             proposal_action,
+            // Update the timestamp to the latest transaction timestamp
             tx_timestamp: transaction.block_timestamp.parse::<i64>().unwrap(),
+            // Update the hash to the latest transaction hash
             hash: transaction.transaction_hash,
         },
     )
@@ -238,5 +310,44 @@ pub async fn handle_act_proposal(
         Status::InternalServerError
     })?;
 
+    tx.commit().await.map_err(|e| {
+        eprintln!("Failed to commit transaction: {:?}", e);
+        Status::InternalServerError
+    })?;
+
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_decode_proposal_description() {
+        let descriptions = [
+            "{\"isStakeRequest\":true,\"warningNotes\":\"Approve to continue staking with this validator\"}",
+            "* Proposal Action: withdraw <br>* Show After Proposal Id Approved: 61 <br>* Custom Notes: Following to [#61](/treasury-testing-infinex.near/widget/app?page=stake-delegation&selectedTab=History&highlightProposalId=61) unstake request",
+            "{\"title\":\"DevHub Developer Contributor report by Megha for 09/09/2024 - 10/06/2024\",\"summary\":\"Worked on integrating new features to treasury dashboard, like asset exchange using the ref-sdk API, stake delegation, made first version live for devhub, fixed some bugs with devhub and other instances.\",\"notes\":\"Treasury balance insufficient\",\"proposalId\":220}",
+            "Change policy",
+            "{}",
+            "* Proposal Action: stake <br>* Custom Notes: Approve to continue staking with this validator",
+            "* Proposal Action: unstake <br>* Notes: Unstake 0.5N",
+            "* Proposal Action: stake",
+            "* Proposal Action: withdraw <br>* Show After Proposal Id Approved: 58 <br>* Custom Notes: Following to [#58](/treasury-testing-infinex.near/widget/app?page=stake-delegation&selectedTab=History&highlightProposalId=58) unstake request"
+        ];
+
+        let expected_results = [
+            "true", "withdraw", "null", "null", "null", "stake", "unstake", "stake", "withdraw",
+        ];
+
+        for (i, description) in descriptions.iter().enumerate() {
+            let result = decode_proposal_description(description);
+
+            assert_eq!(
+                result, expected_results[i],
+                "expected: {} got: {}",
+                expected_results[i], result
+            );
+        }
+    }
 }
