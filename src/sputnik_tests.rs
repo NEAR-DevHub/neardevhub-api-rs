@@ -1,10 +1,4 @@
-use futures::future::join_all;
-use near_api::prelude::Contract;
-
-use crate::{db::db_types::SputnikProposalSnapshotRecord, types::PaginatedResponse, Env};
-use crate::{separate_number_and_text, timestamp_to_date_string};
-use near_sdk::AccountId;
-use serde_json::{json, Value};
+use crate::{db::db_types::SputnikProposalSnapshotRecord, types::PaginatedResponse};
 
 #[rocket::async_test]
 async fn test_get_dao_proposals() {
@@ -130,116 +124,128 @@ async fn test_get_dao_proposals_filters() {
         .await
         .expect("valid `Rocket`");
 
-    // test filters
-    let kind = "ChangePolicy";
-    let status = "Pending";
-    let total_votes = 2;
-    let proposer = "testing-treasury.sputnik-dao.near";
+    let total_votes_options = [0, 1, 2];
 
-    // Test Number of Votes
-    let response = client
-        .get(format!(
-            "/dao/proposals/testing-treasury.sputnik-dao.near?total_votes={}",
+    for total_votes in total_votes_options {
+        // Test Number of Votes
+        let response = client
+            .get(format!(
+                "/dao/proposals/testing-treasury.sputnik-dao.near?filters.total_votes={}",
+                total_votes
+            ))
+            .dispatch();
+
+        let result = response
+            .await
+            .into_json::<PaginatedResponse<SputnikProposalSnapshotRecord>>()
+            .await
+            .unwrap();
+
+        assert!(
+            result.records.len() > 1,
+            "Expected more than 1 record, found {} for total votes {}",
+            result.records.len(),
             total_votes
-        ))
-        .dispatch();
-
-    let result = response
-        .await
-        .into_json::<PaginatedResponse<SputnikProposalSnapshotRecord>>()
-        .await
-        .unwrap();
-
-    assert!(
-        result.records.len() > 1,
-        "Expected more than 1 record, found {} for total votes {}",
-        result.records.len(),
-        total_votes
-    );
-
-    result.records.iter().for_each(|p| {
-        assert_eq!(
-            p.total_votes, total_votes,
-            "Total votes should be {} but is {}",
-            total_votes, p.total_votes
         );
-    });
 
-    // Test Status
-    let response = client
-        .get(format!(
-            "/dao/proposals/testing-treasury.sputnik-dao.near?status={}",
+        result.records.iter().for_each(|p| {
+            assert_eq!(
+                p.total_votes, total_votes,
+                "Total votes should be {} but is {}",
+                total_votes, p.total_votes
+            );
+        });
+    }
+
+    let status_options = ["InProgress", "Approved", "Failed"];
+    for status in status_options {
+        // Test Status
+        let response = client
+            .get(format!(
+                "/dao/proposals/testing-treasury.sputnik-dao.near?filters.status={}",
+                status
+            ))
+            .dispatch();
+
+        let result = response
+            .await
+            .into_json::<PaginatedResponse<SputnikProposalSnapshotRecord>>()
+            .await
+            .unwrap();
+
+        assert!(
+            !result.records.is_empty(),
+            "Expected at least 1 record, found {} for status {}",
+            result.records.len(),
             status
-        ))
-        .dispatch();
-
-    let result = response
-        .await
-        .into_json::<PaginatedResponse<SputnikProposalSnapshotRecord>>()
-        .await
-        .unwrap();
-
-    assert!(
-        result.records.len() > 1,
-        "Expected more than 1 record, found {} for status {}",
-        result.records.len(),
-        status
-    );
-    result.records.iter().for_each(|p| {
-        assert_eq!(
-            p.status, status,
-            "Status should be {} but is {}",
-            status, p.status
         );
-    });
+        result.records.iter().for_each(|p| {
+            assert_eq!(
+                p.status, status,
+                "Status should be {} but is {}",
+                status, p.status
+            );
+        });
+    }
 
-    // Test Kind
-    let response = client
-        .get(format!(
-            "/dao/proposals/testing-treasury.sputnik-dao.near?kind={}",
+    let kind_options = [
+        "ChangePolicy",
+        "FunctionCall",
+        "ChangePolicyUpdateParameters",
+        "AddMemberToRole",
+    ];
+    for kind in kind_options {
+        // Test Kind
+        let response = client
+            .get(format!(
+                "/dao/proposals/testing-treasury.sputnik-dao.near?filters.kind={}",
+                kind
+            ))
+            .dispatch();
+        let result = response
+            .await
+            .into_json::<PaginatedResponse<SputnikProposalSnapshotRecord>>()
+            .await
+            .unwrap();
+
+        assert!(
+            !result.records.is_empty(),
+            "Expected at least 1 record, found {} for kind {}",
+            result.records.len(),
             kind
-        ))
-        .dispatch();
-    let result = response
-        .await
-        .into_json::<PaginatedResponse<SputnikProposalSnapshotRecord>>()
-        .await
-        .unwrap();
-
-    assert!(
-        result.records.len() > 1,
-        "Expected more than 1 record, found {} for kind {}",
-        result.records.len(),
-        kind
-    );
-    result.records.iter().for_each(|p| {
-        assert_eq!(p.kind, kind, "Kind should be {} but is {}", kind, p.kind);
-    });
+        );
+        result.records.iter().for_each(|p| {
+            assert_eq!(p.kind, kind, "Kind should be {} but is {}", kind, p.kind);
+        });
+    }
 
     // Test Proposer
-    let response = client
-        .get(format!(
-            "/dao/proposals/testing-treasury.sputnik-dao.near?proposer={}",
-            proposer
-        ))
-        .dispatch();
-    let result = response
-        .await
-        .into_json::<PaginatedResponse<SputnikProposalSnapshotRecord>>()
-        .await
-        .unwrap();
+    let proposers = vec!["megha19.near", "thomasguntenaar.near", "freski.near"];
+    for proposer in proposers {
+        let response = client
+            .get(format!(
+                "/dao/proposals/testing-treasury.sputnik-dao.near?filters.proposer={}",
+                proposer
+            ))
+            .dispatch();
+        let result = response
+            .await
+            .into_json::<PaginatedResponse<SputnikProposalSnapshotRecord>>()
+            .await
+            .unwrap();
 
-    assert!(
-        result.records.len() > 1,
-        "Expected more than 1 record, found {} for proposer {}",
-        result.records.len(),
-        proposer
-    );
-    result.records.iter().for_each(|p| {
-        assert_eq!(
-            p.proposer, proposer,
-            "Proposer should be {} but is {}",
-            proposer, p.proposer
+        assert!(
+            result.records.len() > 1,
+            "Expected more than 1 record, found {} for proposer {}",
+            result.records.len(),
+            proposer
         );
-    });
+        result.records.iter().for_each(|p| {
+            assert_eq!(
+                p.proposer, proposer,
+                "Proposer should be {} but is {}",
+                proposer, p.proposer
+            );
+        });
+    }
 }
