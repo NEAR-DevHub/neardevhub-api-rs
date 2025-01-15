@@ -202,42 +202,18 @@ impl RpcService {
             .fetch_from(&self.network)
             .await;
 
-        // let result: Result<Data<ProposalOutput>, _> =
-        //     serde_json::from_value::<Data<ProposalOutput>>(value.unwrap().data).unwrap();
-
         match result {
-            Ok(raw_json) => {
-                // eprintln!("Raw JSON response: {:?}", raw_json);
-
-                match serde_json::from_value::<ProposalOutput>(raw_json.data) {
-                    Ok(output) => Ok(output),
-                    Err(e) => {
-                        eprintln!("Deserialization error: {:?}", e);
-                        Err(Status::InternalServerError)
-                    }
+            Ok(raw_json) => match serde_json::from_value::<ProposalOutput>(raw_json.data) {
+                Ok(output) => Ok(output),
+                Err(e) => {
+                    eprintln!("Deserialization error: {:?}", e);
+                    Err(Status::InternalServerError)
                 }
-            }
+            },
             Err(on_block_error) => {
                 eprintln!("get_dao_proposal_on_block with id: {:?}", proposal_id);
                 eprintln!("Failed to get dao proposal on block: {:?}", on_block_error);
-
-                // TODO 157 do we need a fallback here or just a status?
                 Err(Status::InternalServerError)
-                // Ok(ProposalOutput {
-                //     id: proposal_id.try_into().unwrap(),
-                //     proposal: Proposal {
-                //         proposer: AccountId::from_str("deleted.near").unwrap(),
-                //         description: "deleted".to_string(),
-                //         kind: ProposalKind::FunctionCall {
-                //             receiver_id: AccountId::from_str("deleted.near").unwrap(),
-                //             actions: vec![],
-                //         },
-                //         status: ProposalStatus::Removed,
-                //         vote_counts: HashMap::new(),
-                //         votes: HashMap::new(),
-                //         submission_time: U64::from(block_id as u64),
-                //     },
-                // })
             }
         }
     }

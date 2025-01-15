@@ -39,12 +39,7 @@ async fn fetch_all_new_transactions(
             response.txns.len()
         );
 
-        // Check if we've wrapped around or reached the end
-        // TODO 157 Remove behind the || operator
-        if response.cursor.is_none()
-        // || (contract == "testing-astradao.sputnik-dao.near"
-        //     && all_transactions.len() + response.txns.len() >= 50)
-        {
+        if response.cursor.is_none() {
             println!("Cursor has wrapped around, finished fetching transactions");
             all_transactions.extend(response.txns);
             current_cursor = "None".to_string();
@@ -136,7 +131,6 @@ pub async fn process_dao_transactions(
                     "Proposal receipt outcome status is {:?}",
                     transaction.receipt_outcome.status
                 );
-                // eprintln!("On transaction: {:?}", transaction);
                 continue;
             }
             let result = match action.method.as_deref().unwrap_or("") {

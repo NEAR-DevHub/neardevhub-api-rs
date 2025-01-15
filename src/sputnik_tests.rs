@@ -92,28 +92,6 @@ async fn test_get_dao_proposals_order() {
         "If order is id_desc, the first proposal with id {:?} should be the same as total records minus 1 {:?}",
         result.records[0].id, result.total_records - 1
     );
-
-    // From RPC get all proposal ids
-    // let account_id = "testing-treasury.sputnik-dao.near".parse().unwrap();
-    // let contract = Contract(account_id);
-    // let call_function_builder = contract.call_function("get_proposals", ()).unwrap();
-    // let proposal_ids: Value = call_function_builder
-    //     .read_only()
-    //     .fetch_from_mainnet()
-    //     .await
-    //     .unwrap()
-    //     .data;
-    // let proposal_ids: Vec<i32> = proposal_ids
-    //     .as_array()
-    //     .unwrap()
-    //     .iter()
-    //     .map(|p| p.as_i64().unwrap() as i32)
-    //     .collect();
-
-    // assert_eq!(
-    //     proposal_ids,
-    //     result.records.iter().map(|p| p.id).collect::<Vec<i32>>()
-    // );
 }
 
 #[rocket::async_test]

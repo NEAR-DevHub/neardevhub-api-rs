@@ -10,7 +10,6 @@ use std::fmt;
 
 use super::policy::VersionedPolicy;
 
-// NOTE: Not everything has to be deserialized
 pub type Balance = u128;
 
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]

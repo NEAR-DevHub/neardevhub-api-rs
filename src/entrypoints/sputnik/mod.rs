@@ -11,7 +11,6 @@ use std::str::FromStr;
 use utoipa::ToSchema;
 pub mod policy;
 pub mod sputnik_types;
-// use sputnik_types::*;
 
 #[derive(Clone, Debug, FromForm, ToSchema)]
 pub struct GetDaoProposalsFilters {
@@ -19,10 +18,8 @@ pub struct GetDaoProposalsFilters {
     pub kind: Option<String>,
     pub total_votes: Option<i64>,
     pub status: Option<String>,
-    // TODO 157 proposal_action?
+    // TODO 157 proposal_action @Megha-Dev-19
     // pub proposal_action: Option<String>,
-    //TODO 157 description is for search
-    // pub description: Option<String>,
 }
 
 async fn fetch_dao_proposals(

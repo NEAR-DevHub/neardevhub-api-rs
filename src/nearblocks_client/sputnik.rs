@@ -58,8 +58,6 @@ fn decode_proposal_description(description: &str) -> String {
             return value.to_string();
         }
         if let Some(value) = parsed_data.get("isStakeRequest") {
-            println!("isStakeRequest: {:?}", value);
-            // Bool(true)
             return value.to_string();
         }
     }
@@ -92,8 +90,8 @@ pub async fn handle_add_proposal(
 ) -> Result<(), Status> {
     let rpc_service = RpcService::new(contract);
     /*
-    get_last_proposal_id actually returns the number of proposals starting from 0.
-    https://github.com/near-daos/sputnik-dao-contract/blob/3d568f9517a8c7a6510786d978bb25b180501841/sputnikdao2/src/proposals.rs#L532
+      get_last_proposal_id actually returns the number of proposals starting from 0.
+      https://github.com/near-daos/sputnik-dao-contract/blob/3d568f9517a8c7a6510786d978bb25b180501841/sputnikdao2/src/proposals.rs#L532
     */
     let proposal_id = match rpc_service
         .get_last_proposal_id_on_block(transaction.receipt_block.block_height + BLOCK_HEIGHT_OFFSET)
@@ -105,8 +103,6 @@ pub async fn handle_add_proposal(
             return Err(Status::InternalServerError);
         }
     };
-
-    println!("Last proposal id: {}", proposal_id);
 
     let add_proposal_action = transaction
         .actions
@@ -147,17 +143,12 @@ pub async fn handle_add_proposal(
                 "Failed to get dao proposal on block: {:?}, block_height: {}",
                 e, transaction.receipt_block.block_height
             );
-            println!("Skipping proposal, probably deleted, id: {}", proposal_id);
             proposal_output
         }
     };
 
-    println!("Proposal: {:?}", daop.id);
-    println!("Proposal description: {:?}", daop.proposal.description);
-
     let proposal_action = decode_proposal_description(&daop.proposal.description);
 
-    println!("Proposal action: {}", proposal_action);
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
         Status::InternalServerError
@@ -194,7 +185,6 @@ pub async fn handle_add_proposal(
         hash: transaction.transaction_hash,
     };
 
-    // println!("Inserting proposal snapshot {:?}", record);
     DB::upsert_dao_proposal_snapshot(&mut tx, record)
         .await
         .map_err(|e| {
@@ -248,21 +238,6 @@ pub async fn handle_act_proposal(
         }
     };
 
-    println!("act_proposal proposal: {:?}", dao_proposal.id);
-    println!(
-        "act_proposal proposal description: {:?}",
-        dao_proposal.proposal.description
-    );
-
-    println!(
-        "act_proposal proposal vote_counts: {:?}",
-        dao_proposal.proposal.vote_counts
-    );
-    println!(
-        "act_proposal proposal votes: {:?}",
-        dao_proposal.proposal.votes
-    );
-
     let proposal_action = decode_proposal_description(&dao_proposal.proposal.description);
 
     let mut tx = db.begin().await.map_err(|e| {
@@ -272,17 +247,17 @@ pub async fn handle_act_proposal(
 
     let kind = serde_json::to_value(dao_proposal.proposal.kind).unwrap_or_else(|e| {
         eprintln!("Failed to serialize proposal kind: {:?}", e);
-        serde_json::Value::Null // Fallback value
+        serde_json::Value::Null
     });
 
     let vote_counts = serde_json::to_value(dao_proposal.proposal.vote_counts).unwrap_or_else(|e| {
         eprintln!("Failed to serialize vote counts: {:?}", e);
-        serde_json::Value::Null // Fallback value
+        serde_json::Value::Null
     });
 
     let votes = serde_json::to_value(&dao_proposal.proposal.votes).unwrap_or_else(|e| {
         eprintln!("Failed to serialize votes: {:?}", e);
-        serde_json::Value::Null // Fallback value
+        serde_json::Value::Null
     });
     DB::upsert_dao_proposal_snapshot(
         &mut tx,
@@ -298,9 +273,7 @@ pub async fn handle_act_proposal(
             total_votes: dao_proposal.proposal.votes.len() as i32,
             dao_instance: contract.to_string(),
             proposal_action,
-            // Update the timestamp to the latest transaction timestamp
             tx_timestamp: transaction.block_timestamp.parse::<i64>().unwrap(),
-            // Update the hash to the latest transaction hash
             hash: transaction.transaction_hash,
         },
     )

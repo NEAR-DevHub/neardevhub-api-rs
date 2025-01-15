@@ -521,7 +521,7 @@ impl DB {
         Ok(())
     }
 
-    // TODO Remove this once we go in production or put it behind authentication or a flag
+    // TODO Once we go in production put this behind authentication or a flag
     pub async fn remove_all_dao_proposals(&self, account_id: &str) -> anyhow::Result<()> {
         sqlx::query!(
             r#"DELETE FROM dao_proposals WHERE dao_instance = $1"#,
@@ -554,7 +554,6 @@ impl DB {
         tx: &mut Transaction<'static, Postgres>,
         snapshot: &RfpSnapshotRecord,
     ) -> anyhow::Result<()> {
-        // Primary key is (rfp_id, ts)
         let result = sqlx::query!(
             r#"
           INSERT INTO rfp_snapshots (
@@ -904,7 +903,6 @@ impl DB {
         tx: &mut Transaction<'static, Postgres>,
         sputnik_proposal: SputnikProposalSnapshotRecord,
     ) -> anyhow::Result<()> {
-        // JSONB fields
         let kind = match serde_json::to_value(sputnik_proposal.kind) {
             Ok(value) => value,
             Err(e) => {
@@ -941,7 +939,6 @@ impl DB {
             }
         };
 
-        // Attempt to update the existing record
         let update_result = sqlx::query!(
             r#"
             UPDATE dao_proposals SET
@@ -981,32 +978,7 @@ impl DB {
             println!("Updated dao proposal snapshot: {:?}", record.id);
             Ok(())
         } else {
-            println!("Inserting description: {:?}", sputnik_proposal.description);
             println!("Inserting id: {:?}", sputnik_proposal.id);
-            println!("Inserting kind: {:?}", kind);
-            println!("Inserting proposer: {:?}", sputnik_proposal.proposer);
-            println!("Inserting status: {:?}", sputnik_proposal.status);
-            println!(
-                "Inserting submission_time: {:?}",
-                sputnik_proposal.submission_time
-            );
-            println!("Inserting vote_counts: {:?}", vote_counts);
-            println!("Inserting votes: {:?}", sputnik_proposal.votes);
-            println!("Inserting total_votes: {:?}", sputnik_proposal.total_votes);
-            println!(
-                "Inserting dao_instance: {:?}",
-                sputnik_proposal.dao_instance
-            );
-            println!(
-                "Inserting proposal_action: {:?}",
-                sputnik_proposal.proposal_action
-            );
-            println!(
-                "Inserting tx_timestamp: {:?}",
-                sputnik_proposal.tx_timestamp
-            );
-            println!("Inserting hash: {:?}", sputnik_proposal.hash);
-            // If no rows were updated, insert a new record
             let rec = sqlx::query!(
                 r#"
                 INSERT INTO dao_proposals (
@@ -1064,7 +1036,7 @@ impl DB {
             "ts_desc" => "submission_time DESC",
             "id_asc" => "id ASC",
             "id_desc" => "id DESC",
-            _ => "id DESC", // Default to DESC if the order is not recognized
+            _ => "id DESC",
         };
 
         let kind = filters.as_ref().and_then(|f| f.kind.as_ref());
