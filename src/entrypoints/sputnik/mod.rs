@@ -42,6 +42,40 @@ async fn fetch_dao_proposals(
     }
 }
 
+#[utoipa::path(get, path = "/dao/proposals/search/<input>", params(
+  ("input"= &str, Path, description ="The string to search for in proposal name, description, summary, and category fields."),
+))]
+#[get("/proposals/search/<input>")]
+async fn search(
+    input: String,
+    db: &State<DB>,
+) -> Option<Json<PaginatedResponse<SputnikProposalSnapshotRecord>>> {
+    let limit = 10;
+
+    let result = if input.len() == 44 && input.chars().all(|c| c.is_ascii_hexdigit()) {
+        match db.get_dao_proposal_by_hash(&input).await {
+            Ok(proposal) => Ok((vec![proposal], 1)),
+            Err(e) => Err(e),
+        }
+    } else {
+        let search_input = format!("%{}%", input.to_lowercase());
+        db.search_dao_proposals(&search_input, limit, 0).await
+    };
+
+    match result {
+        Ok((proposals, total)) => Some(Json(PaginatedResponse::new(
+            proposals.into_iter().map(Into::into).collect(),
+            1,
+            limit.try_into().unwrap(),
+            total.try_into().unwrap(),
+        ))),
+        Err(e) => {
+            eprintln!("Error fetching proposals: {:?}", e);
+            None
+        }
+    }
+}
+
 #[utoipa::path(get, path = "/dao/proposals/<account_id>?<order>&<limit>&<offset>&<filters>", params(
   ("account_id"= &str, Path, description = "DAO account id"),
   ("order"= &str, Path, description ="default order id_desc"),
@@ -109,13 +143,13 @@ async fn set_block(account_id: &str, block: i64, db: &State<DB>) -> Result<(), S
     }
 }
 
-#[get("/proposals/<account_id>/reset")]
+#[get("/admin/<account_id>/reset")]
 async fn reset_dao_proposals(account_id: &str, db: &State<DB>) -> Result<(), Status> {
     db.remove_all_dao_proposals(account_id).await.unwrap();
     Ok(())
 }
 
-#[get("/proposals/<account_id>/resetandtest")]
+#[get("/admin/<account_id>/resetandtest")]
 async fn reset_and_test(
     account_id: &str,
     db: &State<DB>,
@@ -153,7 +187,8 @@ pub fn stage() -> rocket::fairing::AdHoc {
                 set_block,
                 get_dao_proposals,
                 reset_dao_proposals,
-                reset_and_test
+                reset_and_test,
+                search
             ],
         )
     })

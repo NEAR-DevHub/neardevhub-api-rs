@@ -221,6 +221,7 @@ pub async fn handle_act_proposal(
 
     let rpc_service = RpcService::new(contract);
 
+    // This will error if the proposal is removed.
     let dao_proposal = match rpc_service
         .get_dao_proposal_on_block(
             proposal_id,
@@ -230,6 +231,12 @@ pub async fn handle_act_proposal(
     {
         Ok(dao_proposal) => dao_proposal,
         Err(e) => {
+            if args.action == Action::VoteRemove || args.action == Action::RemoveProposal {
+                println!("Updating proposal status to Removed");
+                db.update_proposal_status(proposal_id, "Removed", contract)
+                    .await?;
+                return Ok(());
+            }
             eprintln!(
                 "Failed to get proposal in act_proposal with id: {}, {:?}",
                 proposal_id, e

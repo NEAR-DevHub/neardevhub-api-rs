@@ -8,6 +8,7 @@ use crate::{
 use near_sdk::AccountId;
 use rocket::{
     fairing::{self, AdHoc},
+    http::Status,
     Build, Rocket,
 };
 use rocket_db_pools::Database;
@@ -1090,6 +1091,95 @@ impl DB {
             .await?;
 
         Ok((proposals, total_count))
+    }
+
+    pub async fn get_dao_proposal_by_hash(
+        &self,
+        hash: &str,
+    ) -> Result<SputnikProposalSnapshotRecord, sqlx::Error> {
+        sqlx::query_as!(
+            SputnikProposalSnapshotRecord,
+            r#"
+            SELECT *
+            FROM dao_proposals
+            WHERE hash = $1
+            ORDER BY submission_time DESC
+            LIMIT 1
+            "#,
+            hash,
+        )
+        .fetch_one(&self.0)
+        .await
+    }
+
+    pub async fn search_dao_proposals(
+        &self,
+        search_term: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<SputnikProposalSnapshotRecord>, i64), sqlx::Error> {
+        // First get the total count
+        let total = sqlx::query_scalar!(
+            r#"
+            SELECT COUNT(DISTINCT id)
+            FROM dao_proposals
+            WHERE 
+                LOWER(description) LIKE $1 OR
+                LOWER(hash) LIKE $1
+            "#,
+            search_term
+        )
+        .fetch_one(&self.0)
+        .await?;
+
+        // Then get the actual records
+        let proposals = sqlx::query_as!(
+            SputnikProposalSnapshotRecord,
+            r#"
+            WITH latest_snapshots AS (
+                SELECT DISTINCT ON (id) *
+                FROM dao_proposals
+                WHERE 
+                    LOWER(description) LIKE $1 OR
+                    LOWER(hash) LIKE $1
+                ORDER BY id, submission_time DESC
+            )
+            SELECT *
+            FROM latest_snapshots
+            ORDER BY id DESC
+            LIMIT $2
+            OFFSET $3
+            "#,
+            search_term,
+            limit,
+            offset
+        )
+        .fetch_all(&self.0)
+        .await?;
+
+        Ok((proposals, total.unwrap_or(0)))
+    }
+
+    pub async fn update_proposal_status(
+        &self,
+        proposal_id: i64,
+        status: &str,
+        contract: &AccountId,
+    ) -> Result<(), Status> {
+        sqlx::query_scalar!(
+            "UPDATE dao_proposals SET status = $1 WHERE id = $2 and dao_instance = $3 RETURNING 1",
+            status,
+            proposal_id as i32,
+            contract.to_string()
+        )
+        .fetch_one(&self.0)
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to update proposal status: {:?}", e);
+            Status::InternalServerError
+        })?;
+
+        Ok(())
     }
 }
 

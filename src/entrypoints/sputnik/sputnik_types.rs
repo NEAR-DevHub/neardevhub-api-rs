@@ -235,7 +235,7 @@ impl From<Action> for Vote {
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub enum Action {
     AddProposal,
