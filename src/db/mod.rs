@@ -943,21 +943,25 @@ impl DB {
         let update_result = sqlx::query!(
             r#"
             UPDATE dao_proposals SET
-                description = $1,
-                kind = $2,
-                proposer = $3,
-                status = $4,
-                submission_time = $5,
-                vote_counts = $6,
-                votes = $7,
-                total_votes = $8,
-                dao_instance = $9,
-                proposal_action = $10,
-                tx_timestamp = $11,
-                hash = $12
-            WHERE id = $13
+                id = $1,
+                proposal_id = $2,
+                description = $3,
+                kind = $4,
+                proposer = $5,
+                status = $6,
+                submission_time = $7,
+                vote_counts = $8,
+                votes = $9,
+                total_votes = $10,
+                dao_instance = $11,
+                proposal_action = $12,
+                tx_timestamp = $13,
+                hash = $14
+            WHERE id = $1
             RETURNING id
             "#,
+            sputnik_proposal.id,
+            sputnik_proposal.proposal_id as i32,
             sputnik_proposal.description,
             kind,
             sputnik_proposal.proposer,
@@ -970,28 +974,28 @@ impl DB {
             sputnik_proposal.proposal_action,
             sputnik_proposal.tx_timestamp,
             sputnik_proposal.hash,
-            sputnik_proposal.id as i32
         )
         .fetch_optional(tx.as_mut())
         .await?;
 
         if let Some(record) = update_result {
-            println!("Updated dao proposal snapshot: {:?}", record.id);
+            println!("Updated dao proposal on id: {:?}", record.id);
             Ok(())
         } else {
             println!("Inserting id: {:?}", sputnik_proposal.id);
             let rec = sqlx::query!(
                 r#"
                 INSERT INTO dao_proposals (
-                    description, id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash
+                    description, id, proposal_id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
                 )
                 ON CONFLICT (id) DO NOTHING
                 RETURNING id
                 "#,
                 sputnik_proposal.description,
-                sputnik_proposal.id as i32,
+                sputnik_proposal.id,
+                sputnik_proposal.proposal_id as i32,
                 kind,
                 sputnik_proposal.proposer,
                 sputnik_proposal.status,
@@ -1035,9 +1039,9 @@ impl DB {
         let order_clause = match order.to_lowercase().as_str() {
             "ts_asc" => "submission_time ASC",
             "ts_desc" => "submission_time DESC",
-            "id_asc" => "id ASC",
-            "id_desc" => "id DESC",
-            _ => "id DESC",
+            "id_asc" => "proposal_id ASC",
+            "id_desc" => "proposal_id DESC",
+            _ => "proposal_id DESC",
         };
 
         let kind = filters.as_ref().and_then(|f| f.kind.as_ref());
@@ -1115,8 +1119,6 @@ impl DB {
     pub async fn search_dao_proposals(
         &self,
         search_term: &str,
-        limit: i64,
-        offset: i64,
     ) -> Result<(Vec<SputnikProposalSnapshotRecord>, i64), sqlx::Error> {
         // First get the total count
         let total = sqlx::query_scalar!(
@@ -1147,12 +1149,9 @@ impl DB {
             SELECT *
             FROM latest_snapshots
             ORDER BY id DESC
-            LIMIT $2
-            OFFSET $3
+            LIMIT 10
             "#,
             search_term,
-            limit,
-            offset
         )
         .fetch_all(&self.0)
         .await?;
@@ -1160,17 +1159,11 @@ impl DB {
         Ok((proposals, total.unwrap_or(0)))
     }
 
-    pub async fn update_proposal_status(
-        &self,
-        proposal_id: i64,
-        status: &str,
-        contract: &AccountId,
-    ) -> Result<(), Status> {
+    pub async fn update_proposal_status(&self, id: String, status: &str) -> Result<(), Status> {
         sqlx::query_scalar!(
-            "UPDATE dao_proposals SET status = $1 WHERE id = $2 and dao_instance = $3 RETURNING 1",
+            "UPDATE dao_proposals SET status = $1 WHERE id = $2 RETURNING id",
             status,
-            proposal_id as i32,
-            contract.to_string()
+            id,
         )
         .fetch_one(&self.0)
         .await

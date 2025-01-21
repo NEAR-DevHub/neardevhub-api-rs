@@ -43,15 +43,13 @@ async fn fetch_dao_proposals(
 }
 
 #[utoipa::path(get, path = "/dao/proposals/search/<input>", params(
-  ("input"= &str, Path, description ="The string to search for in proposal name, description, summary, and category fields."),
+  ("input"= &str, Path, description ="Url encoded lowercase string to search for in proposal name, description, summary, and category fields."),
 ))]
 #[get("/proposals/search/<input>")]
 async fn search(
     input: String,
     db: &State<DB>,
 ) -> Option<Json<PaginatedResponse<SputnikProposalSnapshotRecord>>> {
-    let limit = 10;
-
     let result = if input.len() == 44 && input.chars().all(|c| c.is_ascii_hexdigit()) {
         match db.get_dao_proposal_by_hash(&input).await {
             Ok(proposal) => Ok((vec![proposal], 1)),
@@ -59,14 +57,14 @@ async fn search(
         }
     } else {
         let search_input = format!("%{}%", input.to_lowercase());
-        db.search_dao_proposals(&search_input, limit, 0).await
+        db.search_dao_proposals(&search_input).await
     };
 
     match result {
         Ok((proposals, total)) => Some(Json(PaginatedResponse::new(
             proposals.into_iter().map(Into::into).collect(),
             1,
-            limit.try_into().unwrap(),
+            10,
             total.try_into().unwrap(),
         ))),
         Err(e) => {

@@ -4,7 +4,8 @@
 CREATE TABLE IF NOT EXISTS
   dao_proposals (
     description VARCHAR NOT NULL,
-    id SERIAL PRIMARY KEY,
+    id VARCHAR NOT NULL UNIQUE PRIMARY KEY,
+    proposal_id INT NOT NULL,
     kind jsonb NOT NULL,
     proposer VARCHAR NOT NULL,
     status VARCHAR NOT NULL,
@@ -18,7 +19,9 @@ CREATE TABLE IF NOT EXISTS
     hash VARCHAR NOT NULL -- Link to the transaction that created the proposal?
   );
 
+CREATE UNIQUE INDEX idx_dao_proposals_unique_proposal_instance ON dao_proposals (proposal_id, dao_instance);
 CREATE INDEX idx_dao_proposals_description ON dao_proposals (description);
+CREATE INDEX idx_dao_proposals_proposal_id ON dao_proposals (proposal_id);
 CREATE INDEX idx_dao_proposals_kind ON dao_proposals (kind);
 CREATE INDEX idx_dao_proposals_proposer ON dao_proposals (proposer);
 CREATE INDEX idx_dao_proposals_status ON dao_proposals (status);

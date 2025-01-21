@@ -1,0 +1,102 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH latest_snapshots AS (\n                SELECT DISTINCT ON (proposal_id, dao_instance) *\n                FROM dao_proposals\n                WHERE \n                    LOWER(description) LIKE $1 OR\n                    LOWER(hash) LIKE $1\n                ORDER BY proposal_id, dao_instance, submission_time DESC\n            )\n            SELECT *\n            FROM latest_snapshots\n            ORDER BY proposal_id DESC\n            LIMIT $2\n            OFFSET $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "description",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "proposal_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "proposer",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "submission_time",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "vote_counts",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "votes",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 9,
+        "name": "total_votes",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "dao_instance",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "proposal_action",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "tx_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "hash",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "531e10fac7989af5346853f96d4109322398159a8a1649cc6f71b659c0030fcc"
+}

@@ -38,3 +38,6 @@ borsh = "1.5.3"
 [features]
 default = ["workspaces"]
 workspaces = ["near-workspaces"]
+
+[dev-dependencies]
+urlencoding = "2.1.3"

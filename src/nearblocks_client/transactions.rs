@@ -90,7 +90,11 @@ pub async fn update_dao_via_nearblocks(
     after_block: Option<i64>,
 ) {
     let nearblocks_client = nearblocks_client::ApiClient::new(nearblocks_api_key.to_string());
-
+    println!(
+        "Fetching all new transactions for contract: {} starting from block: {}",
+        contract,
+        after_block.unwrap_or(0)
+    );
     let (all_transactions, _) =
         fetch_all_new_transactions(&nearblocks_client, contract, after_block).await;
 
@@ -105,6 +109,10 @@ pub async fn update_dao_via_nearblocks(
 
     if let Some(transaction) = all_transactions.last() {
         let timestamp_nano = transaction.block_timestamp.parse::<i64>().unwrap();
+        println!(
+            "Setting last updated info for contract: {} with block_height: {}",
+            contract, transaction.block.block_height
+        );
         let _ = db
             .set_last_updated_info_for_contract(
                 contract,
@@ -237,6 +245,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_all_transactions() {
+        dotenvy::dotenv().ok();
+
         let api_key = std::env::var("NEARBLOCKS_API_KEY")
             .expect("NEARBLOCKS_API_KEY environment variable not set");
         let client = nearblocks_client::ApiClient::new(api_key);
@@ -277,6 +287,8 @@ mod tests {
             duplicates.join("\n")
         );
 
+        // Remove strict cursor assertion since it can vary
         println!("Total transactions found: {}", transactions.len());
+        println!("Final cursor: {}", current_cursor);
     }
 }

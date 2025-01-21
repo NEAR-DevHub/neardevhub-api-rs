@@ -37,6 +37,7 @@ impl RpcService {
         }
     }
 
+    // devhub contract
     pub async fn get_proposal(
         &self,
         proposal_id: i32,
@@ -52,6 +53,7 @@ impl RpcService {
         result
     }
 
+    // devhub contract
     pub async fn get_rfp(
         &self,
         rfp_id: i32,
@@ -67,23 +69,32 @@ impl RpcService {
         result
     }
 
+    // sputnik contract
     pub async fn get_dao_proposal(
         &self,
         proposal_id: i64,
     ) -> Result<Data<ProposalOutput>, near_api::errors::QueryError<RpcQueryRequest>> {
         println!("get_dao_proposal: {:?}", proposal_id);
-        let result: Result<Data<ProposalOutput>, _> = self
+        let result: Result<Data<ProposalOutput>, _> = match self
             .contract
             .call_function("get_proposal", json!({ "id": proposal_id }))
             .unwrap()
             .read_only()
             .fetch_from(&self.network)
-            .await;
+            .await
+        {
+            Ok(res) => Ok(res),
+            Err(e) => {
+                eprintln!("Failed to get dao proposal: {:?}", e);
+                Err(e)
+            }
+        };
 
         result
     }
 
-    pub async fn get_last_dao_proposal_id(
+    // sputnik contract
+    pub async fn get_last_proposal_id(
         &self,
     ) -> Result<Data<i64>, near_api::errors::QueryError<RpcQueryRequest>> {
         let result: Result<Data<i64>, _> = self
@@ -116,6 +127,7 @@ impl RpcService {
         result
     }
 
+    // devhub contract
     pub async fn get_all_proposal_ids(&self) -> Result<Vec<i32>, Status> {
         let result: Result<Data<Vec<i32>>, _> = self
             .contract
@@ -134,6 +146,7 @@ impl RpcService {
         }
     }
 
+    // devhub contract
     pub async fn get_proposal_on_block(
         &self,
         proposal_id: i32,
@@ -165,6 +178,7 @@ impl RpcService {
         }
     }
 
+    // devhub contract
     pub async fn get_rfp_on_block(
         &self,
         rfp_id: i32,
@@ -188,6 +202,7 @@ impl RpcService {
         }
     }
 
+    // sputnik contract
     pub async fn get_dao_proposal_on_block(
         &self,
         proposal_id: i64,
@@ -211,13 +226,21 @@ impl RpcService {
                 }
             },
             Err(on_block_error) => {
-                eprintln!("get_dao_proposal_on_block with id: {:?}", proposal_id);
-                eprintln!("Failed to get dao proposal on block: {:?}", on_block_error);
+                eprintln!(
+                    "get_dao_proposal_on_block with id: {:?} on block: {:?}",
+                    proposal_id, block_id
+                );
+
+                eprintln!(
+                    "Failed to get dao proposal on block Error: {:?}",
+                    on_block_error
+                );
                 Err(Status::InternalServerError)
             }
         }
     }
 
+    // sputnik contract
     pub async fn get_dao_proposals_on_block(
         &self,
         from_index: i32,
@@ -253,6 +276,7 @@ impl RpcService {
         }
     }
 
+    // sputnik contract
     pub async fn get_last_proposal_id_on_block(
         &self,
         block_id: i64,

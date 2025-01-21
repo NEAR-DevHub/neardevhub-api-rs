@@ -1,4 +1,3 @@
-use super::types::BLOCK_HEIGHT_OFFSET;
 use crate::db::db_types::SputnikProposalSnapshotRecord;
 use crate::db::DB;
 use crate::entrypoints::sputnik::sputnik_types::{
@@ -94,13 +93,20 @@ pub async fn handle_add_proposal(
       https://github.com/near-daos/sputnik-dao-contract/blob/3d568f9517a8c7a6510786d978bb25b180501841/sputnikdao2/src/proposals.rs#L532
     */
     let proposal_id = match rpc_service
-        .get_last_proposal_id_on_block(transaction.receipt_block.block_height + BLOCK_HEIGHT_OFFSET)
+        .get_last_proposal_id_on_block(transaction.receipt_block.block_height)
         .await
     {
         Ok(last_proposal_id) => last_proposal_id.data - 1,
         Err(e) => {
             eprintln!("Failed to get last dao proposal id on block: {:?}", e);
-            return Err(Status::InternalServerError);
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            println!("Trying again");
+            rpc_service
+                .get_last_proposal_id_on_block(transaction.receipt_block.block_height)
+                .await
+                .unwrap()
+                .data
+                - 1
         }
     };
 
@@ -131,17 +137,14 @@ pub async fn handle_add_proposal(
     };
 
     let daop = match rpc_service
-        .get_dao_proposal_on_block(
-            proposal_id,
-            transaction.receipt_block.block_height + BLOCK_HEIGHT_OFFSET,
-        )
+        .get_dao_proposal_on_block(proposal_id, transaction.receipt_block.block_height)
         .await
     {
         Ok(daop) => daop,
         Err(e) => {
             eprintln!(
-                "Failed to get dao proposal on block: {:?}, block_height: {}",
-                e, transaction.receipt_block.block_height
+                "Failed to get dao proposal on block_height: {} with error: {}",
+                transaction.receipt_block.block_height, e
             );
             proposal_output
         }
@@ -171,7 +174,8 @@ pub async fn handle_add_proposal(
 
     let record = SputnikProposalSnapshotRecord {
         description: daop.proposal.description,
-        id: daop.id as i32,
+        id: format!("{}_{}", daop.id, contract),
+        proposal_id: daop.id as i32,
         kind,
         proposer: daop.proposal.proposer.to_string(),
         status: daop.proposal.status.to_string(),
@@ -221,25 +225,24 @@ pub async fn handle_act_proposal(
 
     let rpc_service = RpcService::new(contract);
 
+    let block_id = transaction.receipt_block.block_height;
+
     // This will error if the proposal is removed.
     let dao_proposal = match rpc_service
-        .get_dao_proposal_on_block(
-            proposal_id,
-            transaction.receipt_block.block_height + BLOCK_HEIGHT_OFFSET,
-        )
+        .get_dao_proposal_on_block(proposal_id, block_id)
         .await
     {
         Ok(dao_proposal) => dao_proposal,
         Err(e) => {
             if args.action == Action::VoteRemove || args.action == Action::RemoveProposal {
                 println!("Updating proposal status to Removed");
-                db.update_proposal_status(proposal_id, "Removed", contract)
+                db.update_proposal_status(format!("{}_{}", proposal_id, contract), "Removed")
                     .await?;
                 return Ok(());
             }
             eprintln!(
-                "Failed to get proposal in act_proposal with id: {}, {:?}",
-                proposal_id, e
+                "Failed to get proposal in act_proposal with id: {} and block_id: {}, Error: {:?}",
+                proposal_id, block_id, e
             );
             return Err(Status::InternalServerError);
         }
@@ -270,7 +273,8 @@ pub async fn handle_act_proposal(
         &mut tx,
         SputnikProposalSnapshotRecord {
             description: dao_proposal.proposal.description,
-            id: dao_proposal.id.try_into().unwrap(),
+            id: format!("{}_{}", dao_proposal.id, contract),
+            proposal_id: dao_proposal.id.try_into().unwrap(),
             kind,
             proposer: dao_proposal.proposal.proposer.to_string(),
             status: dao_proposal.proposal.status.to_string(),

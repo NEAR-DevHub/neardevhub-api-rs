@@ -143,7 +143,8 @@ pub struct RfpDumpRecord {
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
 pub struct SputnikProposalSnapshotRecord {
     pub description: String,
-    pub id: i32,
+    pub id: String,
+    pub proposal_id: i32,
     pub kind: serde_json::Value,
     pub proposer: String,
     pub status: String,
