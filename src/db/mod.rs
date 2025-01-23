@@ -21,8 +21,9 @@ pub struct DB(PgPool);
 pub mod db_types;
 
 use db_types::{
-    BlockHeight, LastUpdatedInfo, ProposalSnapshotRecord, ProposalWithLatestSnapshotView,
-    RfpSnapshotRecord, RfpWithLatestSnapshotView, SputnikProposalSnapshotRecord,
+    BlockHeight, HandlerError, LastUpdatedInfo, ProposalSnapshotRecord,
+    ProposalWithLatestSnapshotView, RfpSnapshotRecord, RfpWithLatestSnapshotView,
+    SputnikProposalSnapshotRecord,
 };
 
 impl DB {
@@ -956,7 +957,8 @@ impl DB {
                 dao_instance = $11,
                 proposal_action = $12,
                 tx_timestamp = $13,
-                hash = $14
+                hash = $14,
+                block_height = $15
             WHERE id = $1
             RETURNING id
             "#,
@@ -974,6 +976,7 @@ impl DB {
             sputnik_proposal.proposal_action,
             sputnik_proposal.tx_timestamp,
             sputnik_proposal.hash,
+            sputnik_proposal.block_height
         )
         .fetch_optional(tx.as_mut())
         .await?;
@@ -986,9 +989,9 @@ impl DB {
             let rec = sqlx::query!(
                 r#"
                 INSERT INTO dao_proposals (
-                    description, id, proposal_id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash
+                    description, id, proposal_id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash, block_height
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
                 )
                 ON CONFLICT (id) DO NOTHING
                 RETURNING id
@@ -1006,7 +1009,8 @@ impl DB {
                 sputnik_proposal.dao_instance,
                 sputnik_proposal.proposal_action,
                 sputnik_proposal.tx_timestamp,
-                sputnik_proposal.hash
+                sputnik_proposal.hash,
+                sputnik_proposal.block_height
             )
             .fetch_optional(tx.as_mut())
             .await;
@@ -1171,6 +1175,26 @@ impl DB {
             eprintln!("Failed to update proposal status: {:?}", e);
             Status::InternalServerError
         })?;
+
+        Ok(())
+    }
+
+    pub async fn track_handler_error(&self, error: HandlerError) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"
+            INSERT INTO handler_errors (transaction_id, error_type, message, block_height, timestamp)
+            VALUES ($1, $2, $3, $4, $5)
+            "#,
+            error.transaction_id,
+            error.error_type,
+            error.message,
+            error.block_height,
+            error.timestamp,
+        )
+        .execute(&self.0)
+        .await?;
+
+        eprintln!("Handler error: {:?}", error);
 
         Ok(())
     }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            WITH latest_snapshots AS (\n                SELECT DISTINCT ON (proposal_id, dao_instance) *\n                FROM dao_proposals\n                WHERE \n                    LOWER(description) LIKE $1 OR\n                    LOWER(hash) LIKE $1\n                ORDER BY proposal_id, dao_instance, submission_time DESC\n            )\n            SELECT *\n            FROM latest_snapshots\n            ORDER BY proposal_id DESC\n            LIMIT $2\n            OFFSET $3\n            ",
+  "query": "\n            WITH latest_snapshots AS (\n                SELECT DISTINCT ON (id) *\n                FROM dao_proposals\n                WHERE \n                    LOWER(description) LIKE $1 OR\n                    LOWER(hash) LIKE $1\n                ORDER BY id, submission_time DESC\n            )\n            SELECT *\n            FROM latest_snapshots\n            ORDER BY id DESC\n            LIMIT 10\n            ",
   "describe": {
     "columns": [
       {
@@ -72,13 +72,16 @@
         "ordinal": 13,
         "name": "hash",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 14,
+        "name": "block_height",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Int8",
-        "Int8"
+        "Text"
       ]
     },
     "nullable": [
@@ -95,8 +98,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "531e10fac7989af5346853f96d4109322398159a8a1649cc6f71b659c0030fcc"
+  "hash": "805fa382898d34109ac097eb34e296f96825e0ca1b5af17cb1ae064807134631"
 }

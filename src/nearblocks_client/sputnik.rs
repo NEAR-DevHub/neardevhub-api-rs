@@ -1,4 +1,4 @@
-use crate::db::db_types::SputnikProposalSnapshotRecord;
+use crate::db::db_types::{HandlerError, SputnikProposalSnapshotRecord};
 use crate::db::DB;
 use crate::entrypoints::sputnik::sputnik_types::{
     Action, Proposal, ProposalKind, ProposalOutput, ProposalStatus,
@@ -86,7 +86,7 @@ pub async fn handle_add_proposal(
     transaction: Transaction,
     db: &State<DB>,
     contract: &AccountId,
-) -> Result<(), Status> {
+) -> Result<i64, Status> {
     let rpc_service = RpcService::new(contract);
     /*
       get_last_proposal_id actually returns the number of proposals starting from 0.
@@ -99,14 +99,34 @@ pub async fn handle_add_proposal(
         Ok(last_proposal_id) => last_proposal_id.data - 1,
         Err(e) => {
             eprintln!("Failed to get last dao proposal id on block: {:?}", e);
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-            println!("Trying again");
-            rpc_service
-                .get_last_proposal_id_on_block(transaction.receipt_block.block_height)
-                .await
-                .unwrap()
-                .data
-                - 1
+            println!(
+                "Setting last updated info for contract: {} with block_height: {}",
+                contract, transaction.block.block_height
+            );
+            let timestamp = transaction.block_timestamp.parse::<i64>().map_err(|e| {
+                eprintln!("Failed to parse block timestamp: {}", e);
+                Status::InternalServerError
+            })?;
+            let _ = db
+                .set_last_updated_info_for_contract(
+                    contract,
+                    timestamp,
+                    transaction.block.block_height,
+                )
+                .await;
+            let _ = db
+                .track_handler_error(HandlerError {
+                    transaction_id: transaction.id,
+                    error_type: format!(
+                        "RPC service failed rpc_service.get_last_proposal_id_on_block({})",
+                        transaction.receipt_block.block_height
+                    ),
+                    message: e.to_string(),
+                    block_height: transaction.block.block_height,
+                    timestamp: chrono::Utc::now(),
+                })
+                .await;
+            return Ok(transaction.block.block_height);
         }
     };
 
@@ -115,18 +135,31 @@ pub async fn handle_add_proposal(
         .as_ref()
         .and_then(|actions| actions.first())
         .ok_or(Status::InternalServerError)?;
+
     let add_proposal_args: AddProposalArgs = serde_json::from_str(
         add_proposal_action
             .args
             .as_ref()
             .unwrap_or(&String::default()),
     )
-    .unwrap();
+    .map_err(|e| {
+        eprintln!("Failed to parse AddProposalArgs: {}", e);
+        Status::InternalServerError
+    })?;
+
+    let proposer =
+        AccountId::from_str(transaction.predecessor_account_id.as_str()).map_err(|e| {
+            eprintln!("Invalid account ID: {}", e);
+            Status::InternalServerError
+        })?;
 
     let proposal_output = ProposalOutput {
-        id: proposal_id.try_into().unwrap(),
+        id: proposal_id.try_into().map_err(|e| {
+            eprintln!("Failed to convert proposal_id: {}", e);
+            Status::InternalServerError
+        })?,
         proposal: Proposal {
-            proposer: AccountId::from_str(transaction.predecessor_account_id.as_str()).unwrap(),
+            proposer,
             description: add_proposal_args.proposal.description,
             kind: add_proposal_args.proposal.kind,
             status: ProposalStatus::Removed,
@@ -187,6 +220,7 @@ pub async fn handle_add_proposal(
         proposal_action,
         tx_timestamp: transaction.block_timestamp.parse::<i64>().unwrap(),
         hash: transaction.transaction_hash,
+        block_height: transaction.block.block_height,
     };
 
     DB::upsert_dao_proposal_snapshot(&mut tx, record)
@@ -203,14 +237,14 @@ pub async fn handle_add_proposal(
 
     println!("Inserted proposal snapshot {}", daop.id);
 
-    Ok(())
+    Ok(transaction.block.block_height)
 }
 
 pub async fn handle_act_proposal(
     transaction: Transaction,
     db: &State<DB>,
     contract: &AccountId,
-) -> Result<(), rocket::http::Status> {
+) -> Result<i64, rocket::http::Status> {
     let action = transaction
         .actions
         .as_ref()
@@ -219,12 +253,14 @@ pub async fn handle_act_proposal(
 
     let json_args = action.args.clone();
 
-    let args: ActProposalArgs = serde_json::from_str(&json_args.unwrap_or_default()).unwrap();
-
-    let proposal_id = args.id;
+    let args: ActProposalArgs =
+        serde_json::from_str(&json_args.unwrap_or_default()).map_err(|e| {
+            eprintln!("Failed to parse ActProposalArgs: {}", e);
+            Status::InternalServerError
+        })?;
 
     let rpc_service = RpcService::new(contract);
-
+    let proposal_id = args.id;
     let block_id = transaction.receipt_block.block_height;
 
     // This will error if the proposal is removed.
@@ -238,13 +274,25 @@ pub async fn handle_act_proposal(
                 println!("Updating proposal status to Removed");
                 db.update_proposal_status(format!("{}_{}", proposal_id, contract), "Removed")
                     .await?;
-                return Ok(());
+                return Ok(transaction.block.block_height);
             }
             eprintln!(
                 "Failed to get proposal in act_proposal with id: {} and block_id: {}, Error: {:?}",
                 proposal_id, block_id, e
             );
-            return Err(Status::InternalServerError);
+            let _ = db
+                .track_handler_error(HandlerError {
+                    transaction_id: transaction.id,
+                    error_type: format!(
+                        "RPC service failed rpc_service.get_dao_proposal_on_block({}, {})",
+                        proposal_id, block_id
+                    ),
+                    message: e.to_string(),
+                    block_height: transaction.block.block_height,
+                    timestamp: chrono::Utc::now(),
+                })
+                .await;
+            return Ok(transaction.block.block_height);
         }
     };
 
@@ -269,12 +317,21 @@ pub async fn handle_act_proposal(
         eprintln!("Failed to serialize votes: {:?}", e);
         serde_json::Value::Null
     });
+
+    let timestamp = transaction.block_timestamp.parse::<i64>().map_err(|e| {
+        eprintln!("Failed to parse block timestamp: {}", e);
+        Status::InternalServerError
+    })?;
+
     DB::upsert_dao_proposal_snapshot(
         &mut tx,
         SputnikProposalSnapshotRecord {
             description: dao_proposal.proposal.description,
             id: format!("{}_{}", dao_proposal.id, contract),
-            proposal_id: dao_proposal.id.try_into().unwrap(),
+            proposal_id: dao_proposal.id.try_into().map_err(|e| {
+                eprintln!("Failed to convert proposal_id: {}", e);
+                Status::InternalServerError
+            })?,
             kind,
             proposer: dao_proposal.proposal.proposer.to_string(),
             status: dao_proposal.proposal.status.to_string(),
@@ -284,8 +341,9 @@ pub async fn handle_act_proposal(
             total_votes: dao_proposal.proposal.votes.len() as i32,
             dao_instance: contract.to_string(),
             proposal_action,
-            tx_timestamp: transaction.block_timestamp.parse::<i64>().unwrap(),
+            tx_timestamp: timestamp,
             hash: transaction.transaction_hash,
+            block_height: transaction.block.block_height,
         },
     )
     .await
@@ -299,7 +357,7 @@ pub async fn handle_act_proposal(
         Status::InternalServerError
     })?;
 
-    Ok(())
+    Ok(transaction.block.block_height)
 }
 
 #[cfg(test)]

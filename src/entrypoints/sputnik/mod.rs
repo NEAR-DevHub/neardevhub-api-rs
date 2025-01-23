@@ -1,4 +1,4 @@
-use crate::db::db_types::SputnikProposalSnapshotRecord;
+use crate::db::db_types::{LastUpdatedInfo, SputnikProposalSnapshotRecord};
 use crate::db::DB;
 use crate::nearblocks_client::transactions::update_dao_via_nearblocks;
 use crate::types::PaginatedResponse;
@@ -141,6 +141,15 @@ async fn set_block(account_id: &str, block: i64, db: &State<DB>) -> Result<(), S
     }
 }
 
+#[get("/admin/<account_id>/block")]
+async fn get_block_info(account_id: &str, db: &State<DB>) -> Result<Json<LastUpdatedInfo>, Status> {
+    let last_updated_info = db
+        .get_last_updated_info_for_contract(&AccountId::from_str(account_id).unwrap())
+        .await
+        .unwrap();
+    Ok(Json(last_updated_info))
+}
+
 #[get("/admin/<account_id>/reset")]
 async fn reset_dao_proposals(account_id: &str, db: &State<DB>) -> Result<(), Status> {
     db.remove_all_dao_proposals(account_id).await.unwrap();
@@ -182,6 +191,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
         rocket.mount(
             "/dao/",
             rocket::routes![
+                get_block_info,
                 set_block,
                 get_dao_proposals,
                 reset_dao_proposals,

@@ -136,8 +136,8 @@ pub async fn process_dao_transactions(
         {
             if !transaction.receipt_outcome.status {
                 eprintln!(
-                    "Proposal receipt outcome status is {:?}",
-                    transaction.receipt_outcome.status
+                    "Proposal receipt outcome status is {:?} with block hash: {}",
+                    transaction.receipt_outcome.status, transaction.receipt_block.block_hash
                 );
                 continue;
             }

@@ -156,4 +156,14 @@ pub struct SputnikProposalSnapshotRecord {
     pub proposal_action: String,
     pub tx_timestamp: i64,
     pub hash: String,
+    pub block_height: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct HandlerError {
+    pub transaction_id: String,
+    pub error_type: String,
+    pub message: String,
+    pub block_height: i64,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
