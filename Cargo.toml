@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-near-workspaces = { version = "0.15.0", optional = true }
+near-workspaces = { version = "0.16.0", optional = true }
 near-account-id = "1.0.0"
 near-sdk = "5.3.0"
 rocket = { version = "0.5.0", features = ['json'] }
@@ -28,8 +28,8 @@ anyhow = "1.0.76"
 rocket_cors = "0.6.0"
 utoipa-swagger-ui = { version = "7.1", features = ["rocket"] }
 reqwest = "0.12.8"
-near-api = "0.3.0"
-near-jsonrpc-client = "0.14.0"
+near-api = "0.4.0"
+near-jsonrpc-client = "0.15.1"
 regex = "1.11.1"
 base64 = "0.22.1"
 futures = "0.3.31"

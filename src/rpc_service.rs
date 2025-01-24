@@ -1,7 +1,8 @@
 use devhub_shared::proposal::VersionedProposal;
 use devhub_shared::rfp::VersionedRFP;
 use near_account_id::AccountId;
-use near_api::{prelude::*, types::reference::Reference, types::Data};
+use near_api::{types::reference::Reference, types::Data};
+use near_api::{Contract, NetworkConfig, RPCEndpoint};
 use near_jsonrpc_client::methods::query::RpcQueryRequest;
 use rocket::http::Status;
 use rocket::serde::json::json;
@@ -42,8 +43,15 @@ impl Default for RpcService {
 
 impl RpcService {
     pub fn new(id: &AccountId) -> Self {
+        let mut network = NetworkConfig::mainnet();
+
+        // FASTNEAR RPC provider as back up when our tests hit a toomanyrequests error.
+        network.rpc_endpoints.push(RPCEndpoint::new(
+            "https://free.rpc.fastnear.com".parse().unwrap(),
+        ));
+
         Self {
-            network: NetworkConfig::mainnet(),
+            network,
             contract: Contract(id.clone()),
         }
     }
