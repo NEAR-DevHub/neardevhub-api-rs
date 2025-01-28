@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n          SELECT after_date, after_block FROM dao_instances_last_updated_info\n          WHERE instance = $1\n          ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "after_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "after_block",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "7780c1a219540cd9f9b374de998f98fb04146a161375a4c2df7ac0ea87316461"
+}
