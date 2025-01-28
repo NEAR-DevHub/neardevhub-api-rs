@@ -2,7 +2,7 @@ use devhub_shared::proposal::VersionedProposal;
 use devhub_shared::rfp::VersionedRFP;
 use near_account_id::AccountId;
 use near_api::{types::reference::Reference, types::Data};
-use near_api::{Contract, NetworkConfig, RPCEndpoint};
+use near_api::{Chain, Contract, NetworkConfig, RPCEndpoint};
 use near_jsonrpc_client::methods::query::RpcQueryRequest;
 use rocket::http::Status;
 use rocket::serde::json::json;
@@ -99,6 +99,21 @@ impl RpcService {
             Ok(res) => Ok(res.data),
             Err(e) => {
                 eprintln!("Failed to get all proposal ids: {:?}", e);
+                Err(Status::InternalServerError)
+            }
+        }
+    }
+
+    pub async fn block_timestamp(&self, block_id: u64) -> Result<u64, Status> {
+        let block = Chain::block()
+            .at(Reference::AtBlock(block_id))
+            .fetch_from(&self.network)
+            .await;
+
+        match block {
+            Ok(block) => Ok(block.header.timestamp),
+            Err(e) => {
+                eprintln!("Failed to get block timestamp: {:?}", e);
                 Err(Status::InternalServerError)
             }
         }

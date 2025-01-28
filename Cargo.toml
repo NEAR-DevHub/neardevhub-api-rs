@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 near-workspaces = { version = "0.16.0", optional = true }
 near-account-id = "1.0.0"
-near-sdk = "5.3.0"
+near-sdk = "5.7.0"
 rocket = { version = "0.5.0", features = ['json'] }
 tokio = { version = "1.4", features = ["full"] }
 rocket_db_pools = { version = "0.2.0", features = ['sqlx_postgres', 'sqlx'] }

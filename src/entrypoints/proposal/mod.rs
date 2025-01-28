@@ -115,6 +115,70 @@ async fn get_proposals(
     )))
 }
 
+#[get("/sync")]
+async fn sync_proposals(
+    db: &State<DB>,
+    contract: &State<AccountId>,
+) -> Result<Json<Vec<i32>>, Status> {
+    let rpc_service = RpcService::new(contract);
+    let proposal_ids = match rpc_service.get_all_proposal_ids().await {
+        Ok(proposal_ids) => proposal_ids,
+        Err(e) => {
+            eprintln!("Failed to get proposal ids: {:?}", e);
+            return Err(Status::InternalServerError);
+        }
+    };
+
+    let last_ten_proposal_ids = proposal_ids
+        .iter()
+        .rev()
+        .take(20)
+        .copied()
+        .collect::<Vec<_>>();
+
+    let mut tx = db.begin().await.map_err(|e| {
+        eprintln!("Failed to begin transaction: {:?}", e);
+        Status::InternalServerError
+    })?;
+
+    for proposal_id in last_ten_proposal_ids.clone() {
+        println!("syncing proposal_id: {}", proposal_id);
+        let proposal = rpc_service.get_proposal(proposal_id).await.unwrap();
+        let block_timestamp = rpc_service
+            .block_timestamp(proposal.block_height)
+            .await
+            .unwrap();
+
+        let snapshot = ProposalSnapshotRecord::from_contract_proposal(
+            proposal.data.into(),
+            block_timestamp as i64,
+            proposal.block_height as i64,
+        );
+
+        DB::upsert_proposal(
+            &mut tx,
+            snapshot.proposal_id as u32,
+            snapshot.editor_id.to_string(),
+        )
+        .await
+        .map_err(|e| {
+            eprintln!(
+                "Failed to upsert proposal {}: {:?}",
+                snapshot.proposal_id, e
+            );
+            Status::InternalServerError
+        })?;
+        let _ = DB::insert_proposal_snapshot(&mut tx, &snapshot).await;
+    }
+
+    tx.commit().await.map_err(|e| {
+        eprintln!("Failed to commit transaction: {:?}", e);
+        Status::InternalServerError
+    })?;
+
+    Ok(Json(last_ten_proposal_ids))
+}
+
 #[utoipa::path(get, path = "/proposal/{proposal_id}/snapshots")]
 #[get("/<proposal_id>/snapshots")]
 async fn get_proposal_with_all_snapshots(
@@ -264,6 +328,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
                     reset,
                     set_cursor,
                     set_block,
+                    sync_proposals,
                 ],
             )
             .mount(
