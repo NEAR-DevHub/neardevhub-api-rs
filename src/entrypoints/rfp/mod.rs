@@ -2,6 +2,7 @@ use self::rfp_types::*;
 use crate::db::db_types::{RfpSnapshotRecord, RfpWithLatestSnapshotView};
 use crate::db::DB;
 use crate::nearblocks_client::transactions::update_nearblocks_data;
+use crate::periodic_updater::PeriodicUpdater;
 use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
@@ -68,52 +69,13 @@ async fn fetch_rfps(
 
 #[get("/sync")]
 async fn sync_rfps(db: &State<DB>, contract: &State<AccountId>) -> Result<Json<Vec<i32>>, Status> {
-    let rpc_service = RpcService::new(contract);
-    let rfp_ids = match rpc_service.get_all_rfp_ids().await {
-        Ok(rfp_ids) => rfp_ids,
+    match PeriodicUpdater::sync_rfps(db, contract).await {
+        Ok(last_ten_rfp_ids) => Ok(Json(last_ten_rfp_ids)),
         Err(e) => {
-            eprintln!("Failed to get rfp ids: {:?}", e);
-            return Err(Status::InternalServerError);
+            eprintln!("Failed to sync RFPs: {}", e);
+            Err(Status::InternalServerError)
         }
-    };
-
-    let last_ten_rfp_ids = rfp_ids.iter().rev().take(10).copied().collect::<Vec<_>>();
-
-    let mut tx = db.begin().await.map_err(|e| {
-        eprintln!("Failed to begin transaction: {:?}", e);
-        Status::InternalServerError
-    })?;
-
-    for rfp_id in last_ten_rfp_ids.clone() {
-        println!("syncing rfp_id: {}", rfp_id);
-        let rfp = rpc_service.get_rfp(rfp_id).await.unwrap();
-        let block_timestamp = rpc_service.block_timestamp(rfp.block_height).await.unwrap();
-
-        let snapshot = RfpSnapshotRecord::from_contract_rfp(
-            rfp.data.into(),
-            block_timestamp as i64,
-            rfp.block_height as i64,
-        );
-
-        DB::upsert_rfp(
-            &mut tx,
-            snapshot.rfp_id as u32,
-            snapshot.editor_id.to_string(),
-        )
-        .await
-        .map_err(|e| {
-            eprintln!("Failed to upsert rfp {}: {:?}", snapshot.rfp_id, e);
-            Status::InternalServerError
-        })?;
-        let _ = DB::insert_rfp_snapshot(&mut tx, &snapshot).await;
     }
-
-    tx.commit().await.map_err(|e| {
-        eprintln!("Failed to commit transaction: {:?}", e);
-        Status::InternalServerError
-    })?;
-
-    Ok(Json(last_ten_rfp_ids))
 }
 
 #[utoipa::path(get, path = "/rfps?<order>&<limit>&<offset>&<filters>", params(

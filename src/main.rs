@@ -1,6 +1,7 @@
 pub mod db;
 pub mod entrypoints;
 pub mod nearblocks_client;
+pub mod periodic_updater;
 pub mod rpc_service;
 pub mod types;
 
@@ -80,6 +81,10 @@ pub struct Env {
     contract: Contract,
     database_url: String,
     nearblocks_api_key: String,
+    #[serde(default)]
+    proposal_sync_interval: u64,
+    #[serde(default)]
+    rfp_sync_interval: u64,
 }
 
 #[launch]
@@ -103,6 +108,7 @@ fn rocket() -> _ {
         "https://events-cache-api-rs.fly.dev",
         // TODO Add prod urls here
     ]);
+
     let allowed_origins = Origins {
         allow_null: true, // Iframe simpleMDE mentioning proposals
         exact: exact_origins.unwrap().exact,
@@ -122,6 +128,8 @@ fn rocket() -> _ {
 
     let contract: AccountId = env.contract.parse::<AccountId>().unwrap();
     let nearblocks_api_key = env.nearblocks_api_key;
+    let proposal_sync_interval = env.proposal_sync_interval;
+    let rfp_sync_interval = env.rfp_sync_interval;
 
     rocket::custom(figment)
         .attach(cors)
@@ -144,4 +152,8 @@ fn rocket() -> _ {
                 bad_request
             ],
         )
+        .attach(periodic_updater::stage(
+            proposal_sync_interval,
+            rfp_sync_interval,
+        ))
 }
