@@ -2,6 +2,7 @@ use self::rfp_types::*;
 use crate::db::db_types::{RfpSnapshotRecord, RfpWithLatestSnapshotView};
 use crate::db::DB;
 use crate::nearblocks_client::transactions::update_nearblocks_data;
+use crate::periodic_updater::PeriodicUpdater;
 use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
@@ -63,6 +64,17 @@ async fn fetch_rfps(
             (vec![], 0)
         }
         Ok(result) => result,
+    }
+}
+
+#[get("/sync")]
+async fn sync_rfps(db: &State<DB>, contract: &State<AccountId>) -> Result<Json<Vec<i32>>, Status> {
+    match PeriodicUpdater::sync_rfps(db, contract).await {
+        Ok(last_ten_rfp_ids) => Ok(Json(last_ten_rfp_ids)),
+        Err(e) => {
+            eprintln!("Failed to sync RFPs: {}", e);
+            Err(Status::InternalServerError)
+        }
     }
 }
 
@@ -173,7 +185,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
         println!("Rfp stage on ignite!");
 
         rocket
-            .mount("/rfps/", rocket::routes![get_rfps, search])
+            .mount("/rfps/", rocket::routes![get_rfps, search, sync_rfps])
             .mount(
                 "/rfp/",
                 rocket::routes![

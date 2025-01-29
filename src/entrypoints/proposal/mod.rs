@@ -4,6 +4,7 @@ use crate::db::db_types::{
 };
 use crate::db::DB;
 use crate::nearblocks_client::transactions::update_nearblocks_data;
+use crate::periodic_updater::PeriodicUpdater;
 use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
@@ -113,6 +114,20 @@ async fn get_proposals(
         limit.try_into().unwrap(),
         total.try_into().unwrap(),
     )))
+}
+
+#[get("/sync")]
+async fn sync_proposals(
+    db: &State<DB>,
+    contract: &State<AccountId>,
+) -> Result<Json<Vec<i32>>, Status> {
+    match PeriodicUpdater::sync_proposals(db, contract).await {
+        Ok(last_ten_proposal_ids) => Ok(Json(last_ten_proposal_ids)),
+        Err(e) => {
+            eprintln!("Failed to sync proposals: {}", e);
+            Err(Status::InternalServerError)
+        }
+    }
 }
 
 #[utoipa::path(get, path = "/proposal/{proposal_id}/snapshots")]
@@ -264,6 +279,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
                     reset,
                     set_cursor,
                     set_block,
+                    sync_proposals,
                 ],
             )
             .mount(
