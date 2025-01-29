@@ -86,6 +86,24 @@ impl RpcService {
         result
     }
 
+    pub async fn get_all_rfp_ids(&self) -> Result<Vec<i32>, Status> {
+        let result: Result<Data<Vec<i32>>, _> = self
+            .contract
+            .call_function("get_all_rfp_ids", ())
+            .unwrap()
+            .read_only()
+            .fetch_from(&self.network)
+            .await;
+
+        match result {
+            Ok(res) => Ok(res.data),
+            Err(e) => {
+                eprintln!("Failed to get all rfp ids: {:?}", e);
+                Err(Status::InternalServerError)
+            }
+        }
+    }
+
     pub async fn get_all_proposal_ids(&self) -> Result<Vec<i32>, Status> {
         let result: Result<Data<Vec<i32>>, _> = self
             .contract
