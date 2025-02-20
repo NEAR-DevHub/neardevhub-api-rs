@@ -69,7 +69,9 @@ pub async fn update_nearblocks_data(
 
     println!("Total transactions fetched: {}", all_transactions.len());
 
-    if let Err(e) = nearblocks_client::transactions::process(&all_transactions, db.into(), contract).await {
+    if let Err(e) =
+        nearblocks_client::transactions::process(&all_transactions, db.into(), contract).await
+    {
         eprintln!("Error processing transactions: {:?}", e);
         return;
     }

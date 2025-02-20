@@ -49,6 +49,9 @@ impl RpcService {
         network.rpc_endpoints.push(RPCEndpoint::new(
             "https://free.rpc.fastnear.com".parse().unwrap(),
         ));
+        network.rpc_endpoints.push(RPCEndpoint::new(
+            "https://rpc.mainnet.fastnear.com".parse().unwrap(),
+        ));
 
         Self {
             network,
