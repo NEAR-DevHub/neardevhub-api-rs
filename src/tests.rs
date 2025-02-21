@@ -3,8 +3,9 @@ use futures::future::join_all;
 use near_api::Contract;
 
 use crate::db::db_types::LastUpdatedInfo;
+use crate::entrypoints::proposal::proposal_types::ProposalBodyFields;
 use crate::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
-use crate::rpc_service::RpcService;
+use crate::rpc_service::{self, RpcService};
 use crate::{db::db_types::ProposalWithLatestSnapshotView, types::PaginatedResponse, Env};
 use crate::{separate_number_and_text, timestamp_to_date_string};
 use futures::StreamExt;
@@ -51,19 +52,17 @@ async fn test_proposal_ids_continuous_name_status_matches() {
 
     let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
     let contract_account_id: AccountId = env.contract.parse().unwrap();
-    let contract = Contract(contract_account_id);
+    let rpc_service = RpcService::new(&contract_account_id);
 
     // Create a Vec of futures for all blockchain calls
     let futures = result.records.iter().enumerate().map(|(ndx, record)| {
         let proposal_id = ndx as i32 + offset;
-        let contract = contract.clone();
+        let rpc_service = rpc_service.clone();
         let record = record.clone();
 
         async move {
-            let call = contract
-                .call_function("get_proposal", json!({"proposal_id": proposal_id}))
-                .unwrap();
-            let proposal: Value = call.read_only().fetch_from_mainnet().await.unwrap().data;
+            let proposal =
+                Proposal::from(rpc_service.get_proposal(proposal_id).await.unwrap().data);
 
             // Return tuple of data needed for assertions
             (proposal_id, proposal, record)
@@ -77,26 +76,25 @@ async fn test_proposal_ids_continuous_name_status_matches() {
     for (proposal_id, proposal, record) in results {
         assert_eq!(record.proposal_id, proposal_id);
 
+        let proposal_snapshot_timeline: Value =
+            serde_json::from_str(proposal.snapshot.body.get_timeline().as_str()).unwrap();
         eprintln!(
             "proposal {:?}, {:?}, {:?}, {:?}",
             proposal_id,
             record.block_height.unwrap(),
-            proposal["snapshot"]["name"],
-            proposal["snapshot"]["timeline"]["status"]
+            proposal.snapshot.body.get_name(),
+            proposal_snapshot_timeline["status"]
         );
 
         assert_eq!(
-            proposal["snapshot"]["name"].as_str().unwrap(),
+            proposal.snapshot.body.get_name().as_str(),
             record.name.unwrap()
         );
 
         let timeline: Value =
             serde_json::from_str(record.timeline.unwrap().as_str().unwrap()).unwrap();
 
-        assert_eq!(
-            proposal["snapshot"]["timeline"]["status"],
-            timeline["status"]
-        );
+        assert_eq!(proposal_snapshot_timeline["status"], timeline["status"]);
     }
 }
 

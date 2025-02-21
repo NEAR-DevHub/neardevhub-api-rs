@@ -69,7 +69,12 @@ pub async fn update_nearblocks_data(
 
     println!("Total transactions fetched: {}", all_transactions.len());
 
-    let _ = nearblocks_client::transactions::process(&all_transactions, db.into(), contract).await;
+    if let Err(e) =
+        nearblocks_client::transactions::process(&all_transactions, db.into(), contract).await
+    {
+        eprintln!("Error processing transactions: {:?}", e);
+        return;
+    }
 
     if let Some(transaction) = all_transactions.last() {
         let timestamp_nano = transaction.block_timestamp.parse::<i64>().unwrap();
