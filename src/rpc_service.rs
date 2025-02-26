@@ -32,6 +32,11 @@ struct QueryResponseResult {
     result: Vec<i32>,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct Env {
+    fastnear_api_key: String,
+}
+
 impl Default for RpcService {
     fn default() -> Self {
         Self {
@@ -43,15 +48,18 @@ impl Default for RpcService {
 
 impl RpcService {
     pub fn new(id: &AccountId) -> Self {
+        dotenvy::dotenv().ok();
+
+        let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
+
         let mut network = NetworkConfig::mainnet();
 
-        // FASTNEAR RPC provider as back up when our tests hit a toomanyrequests error.
-        network.rpc_endpoints.push(RPCEndpoint::new(
-            "https://free.rpc.fastnear.com".parse().unwrap(),
-        ));
-        network.rpc_endpoints.push(RPCEndpoint::new(
-            "https://rpc.mainnet.fastnear.com".parse().unwrap(),
-        ));
+        let custom_endpoint =
+            RPCEndpoint::new("https://rpc.mainnet.fastnear.com/".parse().unwrap())
+                .with_api_key(env.fastnear_api_key.parse().unwrap());
+
+        // Use fastnear first before the archival RPC with super low rate limit
+        network.rpc_endpoints = vec![custom_endpoint, RPCEndpoint::mainnet()];
 
         Self {
             network,
