@@ -85,19 +85,14 @@ async fn get_rfps(
     let limit = limit.unwrap_or(10);
     let offset = offset.unwrap_or(0);
 
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
-    {
-        fetch_changelog_from_rpc(
-            db.inner(),
-            contract.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    let _ = fetch_changelog_from_rpc(
+        db.inner(),
+        contract.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     let (rfps, total) = fetch_rfps(db, limit, order, offset, filters).await;
 
@@ -127,28 +122,22 @@ async fn get_rfp_with_snapshots(
     rfp_id: i64,
     db: &State<DB>,
     contract: &State<AccountId>,
-) -> Result<Json<Vec<RfpSnapshotRecord>>, Status> {
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+) -> Option<Json<Vec<RfpSnapshotRecord>>> {
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
-    {
-        fetch_changelog_from_rpc(
-            db.inner(),
-            contract.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    let _ = fetch_changelog_from_rpc(
+        db.inner(),
+        contract.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     match db.get_rfp_with_all_snapshots(rfp_id).await {
         Err(e) => {
             eprintln!("Failed to get rfps: {:?}", e);
-            // Ok(Json(vec![]))
-            Err(Status::InternalServerError)
+            None
         }
-        Ok((result, _)) => Ok(Json(result)),
+        Ok(result) => Some(Json(result)),
     }
 }
 

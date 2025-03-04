@@ -698,7 +698,7 @@ impl DB {
     pub async fn get_rfp_with_all_snapshots(
         &self,
         id: i64,
-    ) -> anyhow::Result<(Vec<RfpSnapshotRecord>, i64)> {
+    ) -> anyhow::Result<Vec<RfpSnapshotRecord>> {
         // Group by ts
         // Build the SQL query for fetching data with the validated order clause
         let data_sql = r#"
@@ -718,20 +718,8 @@ impl DB {
             .fetch_all(&self.0)
             .await;
 
-        let count_sql = r#"
-            SELECT COUNT(*)
-            FROM rfp_snapshots
-            WHERE rfp_id = $1
-        "#;
-
-        // Build the SQL query for counting total records
-        let total_count = sqlx::query_scalar(count_sql)
-            .bind(id)
-            .fetch_one(&self.0)
-            .await?;
-
         match result {
-            Ok(recs) => Ok((recs, total_count)),
+            Ok(recs) => Ok(recs),
             Err(e) => {
                 eprintln!("Failed to get rfp with all snapshots: {:?}", e);
                 Err(anyhow::anyhow!("Failed to get rfp with all snapshots"))

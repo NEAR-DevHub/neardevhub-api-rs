@@ -6,19 +6,18 @@ use crate::rpc_service::{ChangeLog, ChangeLogType, RpcService};
 use devhub_shared::proposal::VersionedProposal;
 use devhub_shared::rfp::VersionedRFP;
 use near_account_id::AccountId;
-use rocket::http::Status;
 
 pub async fn fetch_changelog_from_rpc(
     db: &DB,
     contract: &AccountId,
     after_block: Option<i64>,
-) -> Result<(), Status> {
+) -> anyhow::Result<()> {
     let rpc_service = RpcService::new(contract);
     let result = match rpc_service.get_change_log_since(after_block.unwrap()).await {
         Ok(change_log) => change_log,
         Err(e) => {
             eprintln!("Error fetching change log: {:?}", e);
-            return Err(e);
+            return Err(anyhow::anyhow!("Error fetching change log from contract"));
         }
     };
 
@@ -41,18 +40,18 @@ async fn handle_proposal_change(
     rpc_service: &RpcService,
     proposal_id: u32,
     change: &ChangeLog,
-) -> Result<(), Status> {
+) -> anyhow::Result<()> {
     let versioned_proposal = match rpc_service.get_proposal(proposal_id as i32).await {
         Ok(proposal) => proposal.data,
         Err(e) => {
             eprintln!("Error fetching proposal: {:?}", e);
-            return Err(Status::InternalServerError);
+            return Err(anyhow::anyhow!("Error fetching proposal"));
         }
     };
     // Add proposal
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to begin transaction")
     })?;
 
     let author_id = match versioned_proposal.clone() {
@@ -63,7 +62,7 @@ async fn handle_proposal_change(
         .await
         .map_err(|e| {
             eprintln!("Failed to upsert proposal {}: {:?}", proposal_id, e);
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to upsert proposal")
         })?;
     let snapshot = ProposalSnapshotRecord::from_contract_proposal(
         versioned_proposal.into(),
@@ -77,18 +76,18 @@ async fn handle_proposal_change(
                 "Failed to insert proposal snapshot for proposal {}: {:?}",
                 proposal_id, e
             );
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to insert proposal snapshot")
         })?;
     DB::set_last_updated_block_on_tx(&mut tx, change.block_id as i64)
         .await
         .map_err(|e| {
             eprintln!("Failed to set last updated block on tx: {:?}", e);
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to set last updated block on tx")
         })?;
 
     tx.commit().await.map_err(|e| {
         eprintln!("Failed to commit transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to commit transaction")
     })?;
     Ok(())
 }
@@ -98,18 +97,18 @@ async fn handle_rfp_change(
     rpc_service: &RpcService,
     rfp_id: u32,
     change: &ChangeLog,
-) -> Result<(), Status> {
+) -> anyhow::Result<()> {
     let versioned_rfp = match rpc_service.get_rfp(rfp_id as i32).await {
         Ok(rfp) => rfp.data,
         Err(e) => {
             eprintln!("Error fetching rfp: {:?}", e);
-            return Err(Status::InternalServerError);
+            return Err(anyhow::anyhow!("Error fetching rfp"));
         }
     };
     // Add rfp
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to begin transaction")
     })?;
     let author_id = match versioned_rfp.clone() {
         VersionedRFP::V0(rfp) => rfp.author_id,
@@ -118,7 +117,7 @@ async fn handle_rfp_change(
         .await
         .map_err(|e| {
             eprintln!("Failed to upsert rfp {}: {:?}", rfp_id, e);
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to upsert rfp")
         })?;
     let snapshot = RfpSnapshotRecord::from_contract_rfp(
         versioned_rfp.into(),
@@ -129,19 +128,19 @@ async fn handle_rfp_change(
         .await
         .map_err(|e| {
             eprintln!("Failed to insert rfp snapshot for rfp {}: {:?}", rfp_id, e);
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to insert rfp snapshot")
         })?;
 
     DB::set_last_updated_block_on_tx(&mut tx, change.block_id as i64)
         .await
         .map_err(|e| {
             eprintln!("Failed to set last updated block on tx: {:?}", e);
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to set last updated block on tx")
         })?;
 
     tx.commit().await.map_err(|e| {
         eprintln!("Failed to commit transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to commit transaction")
     })?;
     Ok(())
 }
