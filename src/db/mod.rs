@@ -126,6 +126,29 @@ impl DB {
         Ok(())
     }
 
+    pub async fn set_last_updated_block_on_tx(
+        tx: &mut Transaction<'static, Postgres>,
+        after_block: BlockHeight,
+    ) -> anyhow::Result<()> {
+        println!("Storing block: {}", after_block);
+        let result = sqlx::query!(
+            r#"
+          UPDATE last_updated_info SET after_block = $1
+          "#,
+            after_block
+        )
+        .execute(tx.as_mut())
+        .await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!("Failed to set last updated block on tx: {:?}", e);
+                Err(anyhow::anyhow!("Failed to set last updated block on tx"))
+            }
+        }
+    }
+
     pub async fn set_last_updated_cursor(&self, cursor: String) -> Result<(), Error> {
         println!("Storing cursor: {}", cursor);
         sqlx::query!(
@@ -675,7 +698,7 @@ impl DB {
     pub async fn get_rfp_with_all_snapshots(
         &self,
         id: i64,
-    ) -> anyhow::Result<(Vec<RfpSnapshotRecord>, i64)> {
+    ) -> anyhow::Result<Vec<RfpSnapshotRecord>> {
         // Group by ts
         // Build the SQL query for fetching data with the validated order clause
         let data_sql = r#"
@@ -695,20 +718,8 @@ impl DB {
             .fetch_all(&self.0)
             .await;
 
-        let count_sql = r#"
-            SELECT COUNT(*)
-            FROM rfp_snapshots
-            WHERE rfp_id = $1
-        "#;
-
-        // Build the SQL query for counting total records
-        let total_count = sqlx::query_scalar(count_sql)
-            .bind(id)
-            .fetch_one(&self.0)
-            .await?;
-
         match result {
-            Ok(recs) => Ok((recs, total_count)),
+            Ok(recs) => Ok(recs),
             Err(e) => {
                 eprintln!("Failed to get rfp with all snapshots: {:?}", e);
                 Err(anyhow::anyhow!("Failed to get rfp with all snapshots"))

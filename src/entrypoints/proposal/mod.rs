@@ -1,9 +1,9 @@
 use self::proposal_types::*;
+use crate::changelog::fetch_changelog_from_rpc;
 use crate::db::db_types::{
     LastUpdatedInfo, ProposalSnapshotRecord, ProposalWithLatestSnapshotView,
 };
 use crate::db::DB;
-use crate::nearblocks_client::transactions::update_nearblocks_data;
 use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
@@ -84,26 +84,19 @@ async fn get_proposals(
     filters: Option<GetProposalFilters>,
     db: &State<DB>,
     contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
 ) -> Option<Json<PaginatedResponse<ProposalWithLatestSnapshotView>>> {
     let order = order.unwrap_or("id_desc");
     let limit = limit.unwrap_or(10);
     let offset = offset.unwrap_or(0);
 
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
-    {
-        update_nearblocks_data(
-            db.inner(),
-            contract.inner(),
-            nearblocks_api_key.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    let _ = fetch_changelog_from_rpc(
+        db.inner(),
+        contract.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     let (proposals, total) = fetch_proposals(db.inner(), limit, order, offset, filters).await;
 
@@ -121,30 +114,23 @@ async fn get_proposal_with_all_snapshots(
     proposal_id: i32,
     db: &State<DB>,
     contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
-) -> Result<Json<Vec<ProposalSnapshotRecord>>, Status> {
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+) -> Option<Json<Vec<ProposalSnapshotRecord>>> {
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
-    {
-        update_nearblocks_data(
-            db.inner(),
-            contract.inner(),
-            nearblocks_api_key.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    let _ = fetch_changelog_from_rpc(
+        db.inner(),
+        contract.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     match db.get_proposal_with_all_snapshots(proposal_id).await {
         Err(e) => {
             eprintln!("Failed to get proposal snapshots: {:?}", e);
             // Ok(Json(vec![]))
-            Err(Status::InternalServerError)
+            None
         }
-        Ok(result) => Ok(Json(result)),
+        Ok(result) => Some(Json(result)),
     }
 }
 
