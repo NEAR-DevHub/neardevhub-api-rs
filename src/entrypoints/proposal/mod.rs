@@ -84,7 +84,6 @@ async fn get_proposals(
     filters: Option<GetProposalFilters>,
     db: &State<DB>,
     contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
 ) -> Option<Json<PaginatedResponse<ProposalWithLatestSnapshotView>>> {
     let order = order.unwrap_or("id_desc");
     let limit = limit.unwrap_or(10);
@@ -99,7 +98,6 @@ async fn get_proposals(
         update_nearblocks_data(
             db.inner(),
             contract.inner(),
-            nearblocks_api_key.inner(),
             Some(last_updated_info.after_block),
         )
         .await;
@@ -121,7 +119,6 @@ async fn get_proposal_with_all_snapshots(
     proposal_id: i32,
     db: &State<DB>,
     contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
 ) -> Result<Json<Vec<ProposalSnapshotRecord>>, Status> {
     let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
@@ -132,7 +129,6 @@ async fn get_proposal_with_all_snapshots(
         update_nearblocks_data(
             db.inner(),
             contract.inner(),
-            nearblocks_api_key.inner(),
             Some(last_updated_info.after_block),
         )
         .await;

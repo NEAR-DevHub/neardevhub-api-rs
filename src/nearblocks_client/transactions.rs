@@ -1,212 +1,130 @@
+use crate::db::db_types::{ProposalSnapshotRecord, RfpSnapshotRecord};
 use crate::db::DB;
-use crate::nearblocks_client;
-use crate::nearblocks_client::proposal::{handle_edit_proposal, handle_set_block_height_callback};
-use crate::nearblocks_client::rfp::{handle_edit_rfp, handle_set_rfp_block_height_callback};
-use crate::nearblocks_client::types::Transaction;
+use crate::entrypoints::proposal::proposal_types::FromContractProposal;
+use crate::entrypoints::rfp::rfp_types::FromContractRFP;
+// TODO: Remove these
+// use crate::nearblocks_client::proposal::{handle_edit_proposal, handle_set_block_height_callback};
+// use crate::nearblocks_client::rfp::{handle_edit_rfp, handle_set_rfp_block_height_callback};
+use crate::rpc_service::{ChangeLogType, RpcService};
+use devhub_shared::proposal::VersionedProposal;
+use devhub_shared::rfp::VersionedRFP;
 use near_account_id::AccountId;
-use rocket::{http::Status, State};
+use rocket::http::Status;
 
-async fn fetch_all_new_transactions(
-    nearblocks_client: &nearblocks_client::ApiClient,
-    contract: &AccountId,
-    after_block: Option<i64>,
-) -> (Vec<Transaction>, String) {
-    let mut all_transactions = Vec::new();
-    let mut current_cursor = "".to_string();
-
-    loop {
-        let response = match nearblocks_client
-            .get_account_txns_by_pagination(
-                contract.clone(),
-                current_cursor.clone(),
-                Some(25),
-                Some("asc".to_string()),
-                Some(1),
-                after_block,
-            )
-            .await
-        {
-            Ok(response) => response,
-            Err(e) => {
-                eprintln!("Failed to fetch transactions from nearblocks: {:?}", e);
-                break;
-            }
-        };
-
-        println!(
-            "Fetched {} transactions from nearblocks",
-            response.txns.len()
-        );
-
-        // Check if we've wrapped around or reached the end
-        if response.cursor.is_none() {
-            println!("Cursor has wrapped around, finished fetching transactions");
-            all_transactions.extend(response.txns);
-            current_cursor = "None".to_string();
-            break;
-        }
-
-        // Add transactions to our collection
-        all_transactions.extend(response.txns);
-
-        // Update cursor for next iteration
-        current_cursor = response.cursor.unwrap();
-    }
-
-    (all_transactions, current_cursor)
-}
-
-pub async fn update_nearblocks_data(
+async fn update_nearblocks_data(
     db: &DB,
     contract: &AccountId,
-    nearblocks_api_key: &str,
     after_block: Option<i64>,
-) {
-    let nearblocks_client = nearblocks_client::ApiClient::new(nearblocks_api_key.to_string());
-
-    let (all_transactions, current_cursor) =
-        fetch_all_new_transactions(&nearblocks_client, contract, after_block).await;
-
-    println!("Total transactions fetched: {}", all_transactions.len());
-
-    if let Err(e) =
-        nearblocks_client::transactions::process(&all_transactions, db.into(), contract).await
-    {
-        eprintln!("Error processing transactions: {:?}", e);
-        return;
-    }
-
-    if let Some(transaction) = all_transactions.last() {
-        let timestamp_nano = transaction.block_timestamp.parse::<i64>().unwrap();
-        let _ = db
-            .set_last_updated_info(
-                timestamp_nano,
-                transaction.block.block_height,
-                current_cursor,
-            )
-            .await;
-    }
-}
-
-pub async fn process(
-    transactions: &[Transaction],
-    db: &State<DB>,
-    contract: &AccountId,
 ) -> Result<(), Status> {
-    for transaction in transactions.iter() {
-        if let Some(action) = transaction
-            .actions
-            .as_ref()
-            .and_then(|actions| actions.first())
-        {
-            if !transaction.receipt_outcome.status {
-                eprintln!(
-                    "Proposal receipt outcome status is {:?}",
-                    transaction.receipt_outcome.status
-                );
-                // eprintln!("On transaction: {:?}", transaction);
-                continue;
-            }
-            let result = match action.method.as_deref().unwrap_or("") {
-                "set_block_height_callback" => {
-                    handle_set_block_height_callback(transaction.to_owned(), db, contract).await
-                }
-                "edit_proposal" => handle_edit_proposal(transaction.to_owned(), db, contract).await,
-                "edit_proposal_timeline" => {
-                    handle_edit_proposal(transaction.to_owned(), db, contract).await
-                }
-                "edit_proposal_versioned_timeline" => {
-                    handle_edit_proposal(transaction.to_owned(), db, contract).await
-                }
-                "edit_proposal_linked_rfp" => {
-                    handle_edit_proposal(transaction.to_owned(), db, contract).await
-                }
-                "edit_proposal_internal" => {
-                    handle_edit_proposal(transaction.to_owned(), db, contract).await
-                }
-                "edit_rfp_timeline" => {
-                    println!("edit_rfp_timeline");
-                    handle_edit_rfp(transaction.to_owned(), db, contract).await
-                }
-                "edit_rfp" => {
-                    println!("edit_rfp");
-                    handle_edit_rfp(transaction.to_owned(), db, contract).await
-                }
-                "edit_rfp_internal" => {
-                    println!("edit_rfp_internal");
-                    handle_edit_rfp(transaction.to_owned(), db, contract).await
-                }
-                "cancel_rfp" => {
-                    println!("cancel_rfp");
-                    handle_edit_rfp(transaction.to_owned(), db, contract).await
-                }
-                "set_rfp_block_height_callback" => {
-                    println!("set_rfp_block_height_callback");
-                    handle_set_rfp_block_height_callback(transaction.to_owned(), db, contract).await
-                }
-                _ => {
-                    if action.action == "FUNCTION_CALL" {
-                        // println!("Unhandled method: {:?}", action.method.as_ref().unwrap());
-                    } else {
-                        // println!("Unhandled action: {:?}", action.action);
+    let rpc_service = RpcService::new(contract);
+    let result = match rpc_service.get_change_log_since(after_block.unwrap()).await {
+        Ok(change_log) => change_log,
+        Err(e) => {
+            eprintln!("Error fetching change log: {:?}", e);
+            return Err(e);
+        }
+    };
+
+    for change in result {
+        // Get the latest proposal
+        match change.change_log_type {
+            ChangeLogType::Proposal(proposal_id) => {
+                let versioned_proposal = match rpc_service.get_proposal(proposal_id as i32).await {
+                    Ok(proposal) => proposal.data,
+                    Err(e) => {
+                        eprintln!("Error fetching proposal: {:?}", e);
+                        return Err(Status::InternalServerError);
                     }
-                    continue;
-                }
-            };
-            result?;
-        }
-    }
+                };
+                // Add proposal
+                let mut tx = db.begin().await.map_err(|e| {
+                    eprintln!("Failed to begin transaction: {:?}", e);
+                    Status::InternalServerError
+                })?;
 
-    Ok(())
-}
+                let author_id = match versioned_proposal.clone() {
+                    VersionedProposal::V0(proposal) => proposal.author_id,
+                };
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashSet;
+                DB::upsert_proposal(&mut tx, proposal_id, author_id.to_string())
+                    .await
+                    .map_err(|e| {
+                        eprintln!("Failed to upsert proposal {}: {:?}", proposal_id, e);
+                        Status::InternalServerError
+                    })?;
+                let snapshot = ProposalSnapshotRecord::from_contract_proposal(
+                    versioned_proposal.into(),
+                    change.block_timestamp as i64,
+                    change.block_id as i64,
+                );
+                DB::insert_proposal_snapshot(&mut tx, &snapshot)
+                    .await
+                    .map_err(|e| {
+                        eprintln!(
+                            "Failed to insert proposal snapshot for proposal {}: {:?}",
+                            proposal_id, e
+                        );
+                        Status::InternalServerError
+                    })?;
+                DB::set_last_updated_block_on_tx(&mut tx, change.block_id as i64)
+                    .await
+                    .map_err(|e| {
+                        eprintln!("Failed to set last updated block on tx: {:?}", e);
+                        Status::InternalServerError
+                    })?;
 
-    #[tokio::test]
-    async fn test_fetch_all_transactions() {
-        let api_key = std::env::var("NEARBLOCKS_API_KEY")
-            .expect("NEARBLOCKS_API_KEY environment variable not set");
-        let client = nearblocks_client::ApiClient::new(api_key);
-        let contract: AccountId = "infrastructure-committee.near"
-            .parse()
-            .expect("Invalid account ID");
+                tx.commit().await.map_err(|e| {
+                    eprintln!("Failed to commit transaction: {:?}", e);
+                    Status::InternalServerError
+                })?;
+            }
+            ChangeLogType::RFP(rfp_id) => {
+                let versioned_rfp = match rpc_service.get_rfp(rfp_id as i32).await {
+                    Ok(rfp) => rfp.data,
+                    Err(e) => {
+                        eprintln!("Error fetching rfp: {:?}", e);
+                        return Err(Status::InternalServerError);
+                    }
+                };
+                // Add rfp
+                let mut tx = db.begin().await.map_err(|e| {
+                    eprintln!("Failed to begin transaction: {:?}", e);
+                    Status::InternalServerError
+                })?;
+                let author_id = match versioned_rfp.clone() {
+                    VersionedRFP::V0(rfp) => rfp.author_id,
+                };
+                DB::upsert_rfp(&mut tx, rfp_id, author_id.to_string())
+                    .await
+                    .map_err(|e| {
+                        eprintln!("Failed to upsert rfp {}: {:?}", rfp_id, e);
+                        Status::InternalServerError
+                    })?;
+                let snapshot = RfpSnapshotRecord::from_contract_rfp(
+                    versioned_rfp.into(),
+                    change.block_timestamp as i64,
+                    change.block_id as i64,
+                );
+                DB::insert_rfp_snapshot(&mut tx, &snapshot)
+                    .await
+                    .map_err(|e| {
+                        eprintln!("Failed to insert rfp snapshot for rfp {}: {:?}", rfp_id, e);
+                        Status::InternalServerError
+                    })?;
 
-        let (transactions, current_cursor) =
-            fetch_all_new_transactions(&client, &contract, Some(0)).await;
+                DB::set_last_updated_block_on_tx(&mut tx, change.block_id as i64)
+                    .await
+                    .map_err(|e| {
+                        eprintln!("Failed to set last updated block on tx: {:?}", e);
+                        Status::InternalServerError
+                    })?;
 
-        // Check total count
-        assert!(
-            transactions.len() >= 600,
-            "Expected at least 600 transactions, but got {}",
-            transactions.len()
-        );
-
-        assert!(
-            current_cursor == "None",
-            "Current cursor should be None but is >{}<",
-            current_cursor
-        );
-
-        // Check for duplicates
-        let mut seen_transactions = HashSet::new();
-        let mut duplicates = Vec::new();
-
-        for tx in &transactions {
-            if !seen_transactions.insert(&tx.id) {
-                duplicates.push(tx.id.clone());
+                tx.commit().await.map_err(|e| {
+                    eprintln!("Failed to commit transaction: {:?}", e);
+                    Status::InternalServerError
+                })?;
             }
         }
-
-        assert!(
-            duplicates.is_empty(),
-            "Found {} duplicate transactions:\n{}",
-            duplicates.len(),
-            duplicates.join("\n")
-        );
-
-        println!("Total transactions found: {}", transactions.len());
     }
+    Ok(())
 }

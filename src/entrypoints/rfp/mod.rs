@@ -80,7 +80,6 @@ async fn get_rfps(
     filters: Option<GetRfpFilters>,
     db: &State<DB>,
     contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
 ) -> Option<Json<PaginatedResponse<RfpWithLatestSnapshotView>>> {
     let order = order.unwrap_or("id_desc");
     let limit = limit.unwrap_or(10);
@@ -95,7 +94,6 @@ async fn get_rfps(
         update_nearblocks_data(
             db.inner(),
             contract.inner(),
-            nearblocks_api_key.inner(),
             Some(last_updated_info.after_block),
         )
         .await;
@@ -129,7 +127,6 @@ async fn get_rfp_with_snapshots(
     rfp_id: i64,
     db: &State<DB>,
     contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
 ) -> Result<Json<Vec<RfpSnapshotRecord>>, Status> {
     let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
@@ -140,7 +137,6 @@ async fn get_rfp_with_snapshots(
         update_nearblocks_data(
             db.inner(),
             contract.inner(),
-            nearblocks_api_key.inner(),
             Some(last_updated_info.after_block),
         )
         .await;

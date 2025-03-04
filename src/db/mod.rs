@@ -126,6 +126,29 @@ impl DB {
         Ok(())
     }
 
+    pub async fn set_last_updated_block_on_tx(
+        tx: &mut Transaction<'static, Postgres>,
+        after_block: BlockHeight,
+    ) -> anyhow::Result<()> {
+        println!("Storing block: {}", after_block);
+        let result = sqlx::query!(
+            r#"
+          UPDATE last_updated_info SET after_block = $1
+          "#,
+            after_block
+        )
+        .execute(tx.as_mut())
+        .await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!("Failed to set last updated block on tx: {:?}", e);
+                Err(anyhow::anyhow!("Failed to set last updated block on tx"))
+            }
+        }
+    }
+
     pub async fn set_last_updated_cursor(&self, cursor: String) -> Result<(), Error> {
         println!("Storing cursor: {}", cursor);
         sqlx::query!(
