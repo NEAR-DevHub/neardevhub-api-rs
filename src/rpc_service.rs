@@ -1,5 +1,5 @@
-use devhub_shared::proposal::VersionedProposal;
-use devhub_shared::rfp::VersionedRFP;
+use devhub_shared::proposal::{ProposalId, VersionedProposal};
+use devhub_shared::rfp::{RFPId, VersionedRFP};
 use near_account_id::AccountId;
 use near_api::{types::reference::Reference, types::Data};
 use near_api::{Contract, NetworkConfig, RPCEndpoint};
@@ -7,6 +7,20 @@ use near_jsonrpc_client::methods::query::RpcQueryRequest;
 use rocket::http::Status;
 use rocket::serde::json::json;
 use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct ChangeLog {
+    pub block_id: u64,
+    pub block_timestamp: u64,
+    pub changed_object_id: u32,
+    pub change_log_type: ChangeLogType,
+}
+
+#[derive(Deserialize)]
+pub enum ChangeLogType {
+    Proposal(ProposalId),
+    RFP(RFPId),
+}
 
 #[derive(Deserialize)]
 pub struct RpcResponse {
@@ -164,6 +178,45 @@ impl RpcService {
             Ok(res) => Ok(res.data),
             Err(e) => {
                 eprintln!("Failed to get rfp on block: {:?}", e);
+                Err(Status::InternalServerError)
+            }
+        }
+    }
+
+    pub async fn get_change_log(&self) -> Result<Vec<ChangeLog>, Status> {
+        let result: Result<Data<Vec<ChangeLog>>, _> = self
+            .contract
+            .call_function("get_change_log", json!({}))
+            .unwrap()
+            .read_only()
+            .fetch_from(&self.network)
+            .await;
+
+        match result {
+            Ok(res) => Ok(res.data),
+            Err(e) => {
+                eprintln!("Failed to get change log: {:?}", e);
+                Err(Status::InternalServerError)
+            }
+        }
+    }
+
+    pub async fn get_change_log_since(&self, block_id: i64) -> Result<Vec<ChangeLog>, Status> {
+        let result: Result<Data<Vec<ChangeLog>>, _> = self
+            .contract
+            .call_function("get_change_log_since", json!({"since": block_id}))
+            .unwrap()
+            .read_only()
+            .fetch_from(&self.network)
+            .await;
+
+        match result {
+            Ok(res) => Ok(res.data),
+            Err(e) => {
+                eprintln!(
+                    "Failed to get change log since: {:?} error: {:?}",
+                    block_id, e
+                );
                 Err(Status::InternalServerError)
             }
         }
