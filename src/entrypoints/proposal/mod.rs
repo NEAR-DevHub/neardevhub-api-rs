@@ -1,9 +1,9 @@
 use self::proposal_types::*;
+use crate::changelog::fetch_changelog_from_rpc;
 use crate::db::db_types::{
     LastUpdatedInfo, ProposalSnapshotRecord, ProposalWithLatestSnapshotView,
 };
 use crate::db::DB;
-use crate::nearblocks_client::transactions::update_nearblocks_data;
 use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
@@ -95,7 +95,7 @@ async fn get_proposals(
     if current_timestamp_nano - last_updated_info.after_date
         >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
     {
-        update_nearblocks_data(
+        fetch_changelog_from_rpc(
             db.inner(),
             contract.inner(),
             Some(last_updated_info.after_block),
@@ -126,7 +126,7 @@ async fn get_proposal_with_all_snapshots(
     if current_timestamp_nano - last_updated_info.after_date
         >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
     {
-        update_nearblocks_data(
+        fetch_changelog_from_rpc(
             db.inner(),
             contract.inner(),
             Some(last_updated_info.after_block),

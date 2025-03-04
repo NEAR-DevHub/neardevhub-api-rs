@@ -1,3 +1,4 @@
+pub mod changelog;
 pub mod db;
 pub mod entrypoints;
 pub mod nearblocks_client;
