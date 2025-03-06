@@ -3,6 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 pub mod types;
 use types::Transaction;
+pub mod transactions;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ApiResponse {
