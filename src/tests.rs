@@ -1,16 +1,15 @@
 use devhub_shared::proposal::{Proposal, VersionedProposal};
 use futures::future::join_all;
-use near_api::Contract;
 
 use crate::db::db_types::LastUpdatedInfo;
 use crate::entrypoints::proposal::proposal_types::ProposalBodyFields;
 use crate::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
-use crate::rpc_service::{self, RpcService};
+use crate::rpc_service::RpcService;
 use crate::{db::db_types::ProposalWithLatestSnapshotView, types::PaginatedResponse, Env};
 use crate::{separate_number_and_text, timestamp_to_date_string};
 use futures::StreamExt;
 use near_sdk::AccountId;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 #[rocket::async_test]
 async fn test_proposal_ids_continuous_name_status_matches() {
