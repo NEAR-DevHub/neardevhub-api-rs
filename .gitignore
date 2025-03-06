@@ -6,4 +6,5 @@ devhub.near*
 events-committee.near*
 infrastructure-committee.near*
 tmp/nearblocks_transactions
+/tmp
 archival-response-decoder.js

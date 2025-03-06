@@ -2,7 +2,8 @@ use crate::entrypoints::sputnik::sputnik_types::ProposalOutput;
 use devhub_shared::proposal::VersionedProposal;
 use devhub_shared::rfp::VersionedRFP;
 use near_account_id::AccountId;
-use near_api::{prelude::*, types::reference::Reference, types::Data};
+use near_api::{types::reference::Reference, types::Data};
+use near_api::{Contract, NetworkConfig, RPCEndpoint};
 use near_jsonrpc_client::methods::query::RpcQueryRequest;
 use rocket::http::Status;
 use rocket::serde::json::json;
@@ -20,6 +21,11 @@ pub struct RpcService {
     contract: Contract,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct Env {
+    fastnear_api_key: String,
+}
+
 impl Default for RpcService {
     fn default() -> Self {
         Self {
@@ -31,8 +37,21 @@ impl Default for RpcService {
 
 impl RpcService {
     pub fn new(id: &AccountId) -> Self {
+        dotenvy::dotenv().ok();
+
+        let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
+
+        let mut network = NetworkConfig::mainnet();
+
+        let custom_endpoint =
+            RPCEndpoint::new("https://rpc.mainnet.fastnear.com/".parse().unwrap())
+                .with_api_key(env.fastnear_api_key.parse().unwrap());
+
+        // Use fastnear first before the archival RPC with super low rate limit
+        network.rpc_endpoints = vec![custom_endpoint, RPCEndpoint::mainnet()];
+
         Self {
-            network: NetworkConfig::mainnet(),
+            network,
             contract: Contract(id.clone()),
         }
     }
