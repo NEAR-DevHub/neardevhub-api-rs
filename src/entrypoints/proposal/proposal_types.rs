@@ -231,7 +231,6 @@ pub struct SetBlockHeightCallbackArgs {
 
 #[near(serializers=[borsh, json])]
 #[derive(Clone)]
-// NOTE: deserializing didn't work for some reason so instead we use get_proposal from RPC
 pub struct EditProposalArgs {
     pub id: ProposalId,
     pub body: VersionedProposalBody,

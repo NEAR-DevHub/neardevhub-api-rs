@@ -37,6 +37,8 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 #[cfg(test)]
+mod sputnik_tests;
+#[cfg(test)]
 mod tests;
 
 #[get("/")]

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM dao_proposals WHERE dao_instance = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b363d1e6cddc4cbe608f90e9dcc56630734e43a0ed6776e52cbb5dc7c5116fbd"
+}

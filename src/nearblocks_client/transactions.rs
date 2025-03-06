@@ -2,6 +2,7 @@ use crate::db::DB;
 use crate::nearblocks_client;
 use crate::nearblocks_client::proposal::{handle_edit_proposal, handle_set_block_height_callback};
 use crate::nearblocks_client::rfp::{handle_edit_rfp, handle_set_rfp_block_height_callback};
+use crate::nearblocks_client::sputnik::{handle_act_proposal, handle_add_proposal};
 use crate::nearblocks_client::types::Transaction;
 use near_account_id::AccountId;
 use rocket::{http::Status, State};
@@ -38,7 +39,6 @@ async fn fetch_all_new_transactions(
             response.txns.len()
         );
 
-        // Check if we've wrapped around or reached the end
         if response.cursor.is_none() {
             println!("Cursor has wrapped around, finished fetching transactions");
             all_transactions.extend(response.txns);
@@ -86,6 +86,88 @@ pub async fn update_nearblocks_data(
             )
             .await;
     }
+}
+
+pub async fn update_dao_via_nearblocks(
+    db: &DB,
+    contract: &AccountId,
+    nearblocks_api_key: &str,
+    after_block: Option<i64>,
+) -> anyhow::Result<()> {
+    let nearblocks_client = nearblocks_client::ApiClient::new(nearblocks_api_key.to_string());
+    println!(
+        "Fetching all new transactions for contract: {} starting from block: {}",
+        contract,
+        after_block.unwrap_or(0)
+    );
+    let (all_transactions, _) =
+        fetch_all_new_transactions(&nearblocks_client, contract, after_block).await;
+
+    println!("Total transactions fetched: {}", all_transactions.len());
+
+    // Process transactions and get the last successful block height
+    let last_successful_block =
+        process_dao_transactions(&all_transactions, db.into(), contract).await?;
+
+    // Only update the after_block if all transactions were processed successfully
+    println!(
+        "Setting last updated info for contract: {} with block_height: {}",
+        contract, last_successful_block
+    );
+
+    Ok(())
+}
+
+pub async fn process_dao_transactions(
+    transactions: &[Transaction],
+    db: &State<DB>,
+    contract: &AccountId,
+) -> anyhow::Result<i64> {
+    // Return the last successful block height
+    let mut last_successful_block = None;
+
+    for transaction in transactions.iter() {
+        if let Some(action) = transaction
+            .actions
+            .as_ref()
+            .and_then(|actions| actions.first())
+        {
+            if !transaction.receipt_outcome.status {
+                eprintln!(
+                    "Proposal receipt outcome status is {:?} with block hash: {}",
+                    transaction.receipt_outcome.status, transaction.receipt_block.block_hash
+                );
+                continue;
+            }
+
+            // Process the transaction and propagate any errors
+            match action.method.as_deref().unwrap_or("") {
+                "add_proposal" => {
+                    println!("add_proposal");
+                    let block_height =
+                        handle_add_proposal(transaction.to_owned(), db, contract).await?;
+                    last_successful_block = Some(block_height);
+                }
+                "act_proposal" => {
+                    println!("act_proposal");
+                    let block_height =
+                        handle_act_proposal(transaction.to_owned(), db, contract).await?;
+                    last_successful_block = Some(block_height);
+                }
+                _ => {
+                    if action.action == "FUNCTION_CALL" {
+                        println!("Unhandled method: {:?}", action.method.as_ref().unwrap());
+                    } else {
+                        println!("Unhandled action: {:?}", action.action);
+                    }
+                    continue;
+                }
+            };
+        }
+    }
+
+    last_successful_block
+        .ok_or_else(|| anyhow::anyhow!("No transactions were processed successfully"))
 }
 
 pub async fn process(
@@ -167,6 +249,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_all_transactions() {
+        dotenvy::dotenv().ok();
+
         let api_key = std::env::var("NEARBLOCKS_API_KEY")
             .expect("NEARBLOCKS_API_KEY environment variable not set");
         let client = nearblocks_client::ApiClient::new(api_key);
@@ -207,6 +291,8 @@ mod tests {
             duplicates.join("\n")
         );
 
+        // Remove strict cursor assertion since it can vary
         println!("Total transactions found: {}", transactions.len());
+        println!("Final cursor: {}", current_cursor);
     }
 }

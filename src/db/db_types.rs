@@ -139,3 +139,31 @@ pub struct RfpDumpRecord {
     pub author: String,
     pub rfp_id: i32,
 }
+
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
+pub struct SputnikProposalSnapshotRecord {
+    pub description: String,
+    pub id: String,
+    pub proposal_id: i32,
+    pub kind: serde_json::Value,
+    pub proposer: String,
+    pub status: String,
+    pub submission_time: i64,
+    pub vote_counts: serde_json::Value,
+    pub votes: serde_json::Value,
+    pub total_votes: i32,
+    pub dao_instance: String,
+    pub proposal_action: String,
+    pub tx_timestamp: i64,
+    pub hash: String,
+    pub block_height: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct HandlerError {
+    pub transaction_id: String,
+    pub error_type: String,
+    pub message: String,
+    pub block_height: i64,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
