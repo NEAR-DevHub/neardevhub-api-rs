@@ -12,7 +12,6 @@ use serde::Deserialize;
 pub struct ChangeLog {
     pub block_id: u64,
     pub block_timestamp: u64,
-    pub changed_object_id: u32,
     pub change_log_type: ChangeLogType,
 }
 
@@ -201,23 +200,22 @@ impl RpcService {
         }
     }
 
-    pub async fn get_change_log_since(&self, block_id: i64) -> Result<Vec<ChangeLog>, Status> {
-        let result: Result<Data<Vec<ChangeLog>>, _> = self
+    pub async fn get_change_log_since(&self, block_id: i64) -> anyhow::Result<Vec<ChangeLog>> {
+        match self
             .contract
             .call_function("get_change_log_since", json!({"since": block_id}))
             .unwrap()
             .read_only()
             .fetch_from(&self.network)
-            .await;
-
-        match result {
+            .await
+        {
             Ok(res) => Ok(res.data),
             Err(e) => {
                 eprintln!(
                     "Failed to get change log since: {:?} error: {:?}",
                     block_id, e
                 );
-                Err(Status::InternalServerError)
+                Err(anyhow::anyhow!("Failed to get change log since: {:?}", e))
             }
         }
     }
