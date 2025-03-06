@@ -8,7 +8,7 @@ use crate::rpc_service::RpcService;
 use near_account_id::AccountId;
 use near_sdk::json_types::U64;
 use regex::Regex;
-use rocket::{http::Status, State};
+use rocket::State;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -63,9 +63,9 @@ fn decode_proposal_description(description: &str) -> String {
 
     // Handle as markdown
     let keys = ["proposal_action", "isStakeRequest"];
+    let re = Regex::new(r"^\* (.+): (.+)$").unwrap();
     for key in &keys {
         let markdown_key = parse_key_to_readable_format(key);
-        let re = Regex::new(r"^\* (.+): (.+)$").unwrap();
 
         for line in description.split("<br>") {
             if let Some(captures) = re.captures(line) {
@@ -86,7 +86,7 @@ pub async fn handle_add_proposal(
     transaction: Transaction,
     db: &State<DB>,
     contract: &AccountId,
-) -> Result<i64, Status> {
+) -> anyhow::Result<i64> {
     let rpc_service = RpcService::new(contract);
     /*
       get_last_proposal_id actually returns the number of proposals starting from 0.
@@ -99,21 +99,6 @@ pub async fn handle_add_proposal(
         Ok(last_proposal_id) => last_proposal_id.data - 1,
         Err(e) => {
             eprintln!("Failed to get last dao proposal id on block: {:?}", e);
-            println!(
-                "Setting last updated info for contract: {} with block_height: {}",
-                contract, transaction.block.block_height
-            );
-            let timestamp = transaction.block_timestamp.parse::<i64>().map_err(|e| {
-                eprintln!("Failed to parse block timestamp: {}", e);
-                Status::InternalServerError
-            })?;
-            let _ = db
-                .set_last_updated_info_for_contract(
-                    contract,
-                    timestamp,
-                    transaction.block.block_height,
-                )
-                .await;
             let _ = db
                 .track_handler_error(HandlerError {
                     transaction_id: transaction.id,
@@ -126,7 +111,7 @@ pub async fn handle_add_proposal(
                     timestamp: chrono::Utc::now(),
                 })
                 .await;
-            return Ok(transaction.block.block_height);
+            return Err(anyhow::anyhow!("Failed to get last proposal ID"));
         }
     };
 
@@ -134,7 +119,7 @@ pub async fn handle_add_proposal(
         .actions
         .as_ref()
         .and_then(|actions| actions.first())
-        .ok_or(Status::InternalServerError)?;
+        .ok_or(anyhow::anyhow!("Failed to get add proposal action"))?;
 
     let add_proposal_args: AddProposalArgs = serde_json::from_str(
         add_proposal_action
@@ -144,19 +129,19 @@ pub async fn handle_add_proposal(
     )
     .map_err(|e| {
         eprintln!("Failed to parse AddProposalArgs: {}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to parse AddProposalArgs")
     })?;
 
     let proposer =
         AccountId::from_str(transaction.predecessor_account_id.as_str()).map_err(|e| {
             eprintln!("Invalid account ID: {}", e);
-            Status::InternalServerError
+            anyhow::anyhow!("Invalid account ID")
         })?;
 
     let proposal_output = ProposalOutput {
         id: proposal_id.try_into().map_err(|e| {
             eprintln!("Failed to convert proposal_id: {}", e);
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to convert proposal_id")
         })?,
         proposal: Proposal {
             proposer,
@@ -187,7 +172,7 @@ pub async fn handle_add_proposal(
 
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to begin transaction")
     })?;
 
     let kind = serde_json::to_value(daop.proposal.kind).unwrap_or_else(|e| {
@@ -227,12 +212,19 @@ pub async fn handle_add_proposal(
         .await
         .map_err(|e| {
             eprintln!("Failed to insert transactions {}: {:?}", transaction.id, e);
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to insert transactions")
+        })?;
+
+    DB::set_after_block(&mut tx, contract, transaction.block.block_height)
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to set last updated info for contract: {:?}", e);
+            anyhow::anyhow!("Failed to set last updated info for contract")
         })?;
 
     tx.commit().await.map_err(|e| {
         eprintln!("Failed to commit transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to commit transaction")
     })?;
 
     println!("Inserted proposal snapshot {}", daop.id);
@@ -244,19 +236,19 @@ pub async fn handle_act_proposal(
     transaction: Transaction,
     db: &State<DB>,
     contract: &AccountId,
-) -> Result<i64, rocket::http::Status> {
+) -> anyhow::Result<i64> {
     let action = transaction
         .actions
         .as_ref()
         .and_then(|actions| actions.first())
-        .ok_or(Status::InternalServerError)?;
+        .ok_or(anyhow::anyhow!("Failed to get act proposal action"))?;
 
     let json_args = action.args.clone();
 
     let args: ActProposalArgs =
         serde_json::from_str(&json_args.unwrap_or_default()).map_err(|e| {
             eprintln!("Failed to parse ActProposalArgs: {}", e);
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to parse ActProposalArgs")
         })?;
 
     let rpc_service = RpcService::new(contract);
@@ -273,7 +265,11 @@ pub async fn handle_act_proposal(
             if args.action == Action::VoteRemove || args.action == Action::RemoveProposal {
                 println!("Updating proposal status to Removed");
                 db.update_proposal_status(format!("{}_{}", proposal_id, contract), "Removed")
-                    .await?;
+                    .await
+                    .map_err(|e| {
+                        eprintln!("Failed to update proposal status: {:?}", e);
+                        anyhow::anyhow!("Failed to update proposal status")
+                    })?;
                 return Ok(transaction.block.block_height);
             }
             eprintln!(
@@ -292,7 +288,7 @@ pub async fn handle_act_proposal(
                     timestamp: chrono::Utc::now(),
                 })
                 .await;
-            return Ok(transaction.block.block_height);
+            return Err(anyhow::anyhow!("Failed to get proposal from RPC"));
         }
     };
 
@@ -300,7 +296,7 @@ pub async fn handle_act_proposal(
 
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to begin transaction")
     })?;
 
     let kind = serde_json::to_value(dao_proposal.proposal.kind).unwrap_or_else(|e| {
@@ -320,7 +316,7 @@ pub async fn handle_act_proposal(
 
     let timestamp = transaction.block_timestamp.parse::<i64>().map_err(|e| {
         eprintln!("Failed to parse block timestamp: {}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to parse block timestamp")
     })?;
 
     DB::upsert_dao_proposal_snapshot(
@@ -330,7 +326,7 @@ pub async fn handle_act_proposal(
             id: format!("{}_{}", dao_proposal.id, contract),
             proposal_id: dao_proposal.id.try_into().map_err(|e| {
                 eprintln!("Failed to convert proposal_id: {}", e);
-                Status::InternalServerError
+                anyhow::anyhow!("Failed to convert proposal_id")
             })?,
             kind,
             proposer: dao_proposal.proposal.proposer.to_string(),
@@ -349,12 +345,12 @@ pub async fn handle_act_proposal(
     .await
     .map_err(|e| {
         eprintln!("Failed to insert transactions {}: {:?}", transaction.id, e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to insert transactions")
     })?;
 
     tx.commit().await.map_err(|e| {
         eprintln!("Failed to commit transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to commit transaction")
     })?;
 
     Ok(transaction.block.block_height)

@@ -88,7 +88,7 @@ pub async fn update_dao_via_nearblocks(
     contract: &AccountId,
     nearblocks_api_key: &str,
     after_block: Option<i64>,
-) {
+) -> anyhow::Result<()> {
     let nearblocks_client = nearblocks_client::ApiClient::new(nearblocks_api_key.to_string());
     println!(
         "Fetching all new transactions for contract: {} starting from block: {}",
@@ -100,34 +100,27 @@ pub async fn update_dao_via_nearblocks(
 
     println!("Total transactions fetched: {}", all_transactions.len());
 
-    let _ = nearblocks_client::transactions::process_dao_transactions(
-        &all_transactions,
-        db.into(),
-        contract,
-    )
-    .await;
+    // Process transactions and get the last successful block height
+    let last_successful_block =
+        process_dao_transactions(&all_transactions, db.into(), contract).await?;
 
-    if let Some(transaction) = all_transactions.last() {
-        let timestamp_nano = transaction.block_timestamp.parse::<i64>().unwrap();
-        println!(
-            "Setting last updated info for contract: {} with block_height: {}",
-            contract, transaction.block.block_height
-        );
-        let _ = db
-            .set_last_updated_info_for_contract(
-                contract,
-                timestamp_nano,
-                transaction.block.block_height,
-            )
-            .await;
-    }
+    // Only update the after_block if all transactions were processed successfully
+    println!(
+        "Setting last updated info for contract: {} with block_height: {}",
+        contract, last_successful_block
+    );
+
+    Ok(())
 }
 
 pub async fn process_dao_transactions(
     transactions: &[Transaction],
     db: &State<DB>,
     contract: &AccountId,
-) -> Result<(), Status> {
+) -> anyhow::Result<i64> {
+    // Return the last successful block height
+    let mut last_successful_block = None;
+
     for transaction in transactions.iter() {
         if let Some(action) = transaction
             .actions
@@ -141,14 +134,20 @@ pub async fn process_dao_transactions(
                 );
                 continue;
             }
-            let result = match action.method.as_deref().unwrap_or("") {
+
+            // Process the transaction and propagate any errors
+            match action.method.as_deref().unwrap_or("") {
                 "add_proposal" => {
                     println!("add_proposal");
-                    handle_add_proposal(transaction.to_owned(), db, contract).await
+                    let block_height =
+                        handle_add_proposal(transaction.to_owned(), db, contract).await?;
+                    last_successful_block = Some(block_height);
                 }
                 "act_proposal" => {
                     println!("act_proposal");
-                    handle_act_proposal(transaction.to_owned(), db, contract).await
+                    let block_height =
+                        handle_act_proposal(transaction.to_owned(), db, contract).await?;
+                    last_successful_block = Some(block_height);
                 }
                 _ => {
                     if action.action == "FUNCTION_CALL" {
@@ -159,11 +158,11 @@ pub async fn process_dao_transactions(
                     continue;
                 }
             };
-            result?;
         }
     }
 
-    Ok(())
+    last_successful_block
+        .ok_or_else(|| anyhow::anyhow!("No transactions were processed successfully"))
 }
 
 pub async fn process(

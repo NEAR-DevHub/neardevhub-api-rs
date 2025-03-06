@@ -81,6 +81,28 @@ impl DB {
         })
     }
 
+    pub async fn set_after_block(
+        tx: &mut Transaction<'static, Postgres>,
+        contract: &AccountId,
+        after_block: BlockHeight,
+    ) -> Result<(), Error> {
+        sqlx::query!(
+            r#"
+          INSERT INTO dao_instances_last_updated_info (instance, after_date, after_block)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (instance) DO UPDATE SET
+            after_date = $2,
+            after_block = $3
+          "#,
+            contract.to_string(),
+            0,
+            after_block,
+        )
+        .execute(tx.as_mut())
+        .await?;
+        Ok(())
+    }
+
     pub async fn set_last_updated_info_for_contract(
         &self,
         contract: &AccountId,

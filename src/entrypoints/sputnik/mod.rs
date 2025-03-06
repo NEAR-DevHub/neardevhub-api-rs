@@ -108,19 +108,23 @@ async fn get_dao_proposals(
         .await
         .unwrap();
 
-    update_dao_via_nearblocks(
+    if let Err(e) = update_dao_via_nearblocks(
         db.inner(),
         &contract,
         nearblocks_api_key.inner(),
         Some(last_updated_info.after_block),
     )
-    .await;
+    .await
+    {
+        eprintln!("Failed to update DAO via nearblocks: {e}");
+        return None;
+    }
 
     let (proposals, total) =
         fetch_dao_proposals(db, account_id, limit, order, offset, filters).await;
 
     Some(Json(PaginatedResponse::new(
-        proposals.into_iter().map(Into::into).collect(),
+        proposals.into_iter().collect(),
         1,
         limit.try_into().unwrap(),
         total.try_into().unwrap(),
@@ -172,12 +176,13 @@ async fn reset_and_test(
 
     db.remove_all_dao_proposals(account_id).await.unwrap();
 
-    update_dao_via_nearblocks(db.inner(), &contract, nearblocks_api_key.inner(), Some(0)).await;
+    let _ =
+        update_dao_via_nearblocks(db.inner(), &contract, nearblocks_api_key.inner(), Some(0)).await;
 
     let (proposals, total) = fetch_dao_proposals(db, account_id, 10, "id_desc", 0, None).await;
 
     Json(PaginatedResponse::new(
-        proposals.into_iter().map(Into::into).collect(),
+        proposals.into_iter().collect(),
         1,
         10,
         total.try_into().unwrap(),
