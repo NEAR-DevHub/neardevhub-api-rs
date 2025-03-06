@@ -35,6 +35,9 @@ impl Default for RpcService {
     }
 }
 
+// Epoch 43,200
+// 5 Epochs = 216,000
+
 impl RpcService {
     pub fn new(id: &AccountId) -> Self {
         dotenvy::dotenv().ok();
@@ -226,7 +229,7 @@ impl RpcService {
         &self,
         proposal_id: i64,
         block_id: i64,
-    ) -> Result<ProposalOutput, Status> {
+    ) -> anyhow::Result<ProposalOutput> {
         let result: Result<Data<Value>, near_api::errors::QueryError<RpcQueryRequest>> = self
             .contract
             .call_function("get_proposal", json!({ "id": proposal_id }))
@@ -241,7 +244,7 @@ impl RpcService {
                 Ok(output) => Ok(output),
                 Err(e) => {
                     eprintln!("Deserialization error: {:?}", e);
-                    Err(Status::InternalServerError)
+                    Err(anyhow::anyhow!("Deserialization error: {:?}", e))
                 }
             },
             Err(on_block_error) => {
@@ -254,7 +257,10 @@ impl RpcService {
                     "Failed to get dao proposal on block Error: {:?}",
                     on_block_error
                 );
-                Err(Status::InternalServerError)
+                Err(anyhow::anyhow!(
+                    "Failed to get dao proposal on block: {:?}",
+                    on_block_error
+                ))
             }
         }
     }

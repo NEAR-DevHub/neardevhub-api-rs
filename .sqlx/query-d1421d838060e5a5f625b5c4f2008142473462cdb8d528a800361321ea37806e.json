@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n          INSERT INTO dao_instances_last_updated_info (instance, after_date, after_block)\n          VALUES ($1, $2, $3)\n          ON CONFLICT (instance) DO UPDATE SET\n            after_date = $2,\n            after_block = $3\n          ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d1421d838060e5a5f625b5c4f2008142473462cdb8d528a800361321ea37806e"
+}
