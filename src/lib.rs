@@ -10,18 +10,12 @@ pub use rpc_service::RpcService;
 pub use types::PaginatedResponse;
 
 use crate::entrypoints::ApiDoc;
+use crate::rpc_service::Env;
 use near_account_id::AccountId;
 use rocket::{catch, catchers, get, routes};
 use rocket_cors::{AllOrSome, AllowedOrigins, Origins};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-
-#[derive(Debug, serde::Deserialize)]
-pub struct Env {
-    pub contract: String,
-    pub database_url: String,
-    pub nearblocks_api_key: String,
-}
 
 // Helper functions
 pub fn separate_number_and_text(input: &str) -> (Option<i32>, String) {
@@ -94,7 +88,7 @@ fn bad_request() -> &'static str {
     "Custom 400 Error: Bad Request"
 }
 
-pub fn rocket() -> rocket::Rocket<rocket::Build> {
+pub fn rocket(rpc_service: Option<RpcService>) -> rocket::Rocket<rocket::Build> {
     dotenvy::dotenv().ok();
 
     let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
@@ -134,12 +128,15 @@ pub fn rocket() -> rocket::Rocket<rocket::Build> {
     let contract: AccountId = env.contract.parse::<AccountId>().unwrap();
     let nearblocks_api_key = env.nearblocks_api_key;
 
+    let rpc_service = rpc_service.unwrap_or(RpcService::new());
+
     rocket::custom(figment)
         .attach(cors)
         .attach(db::stage())
         .mount("/", routes![robots, index])
         .manage(contract)
         .manage(nearblocks_api_key)
+        .manage(rpc_service)
         .mount("/test", rocket::routes![test])
         .attach(entrypoints::stage())
         .mount(

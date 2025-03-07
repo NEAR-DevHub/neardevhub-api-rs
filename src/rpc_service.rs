@@ -8,6 +8,15 @@ use rocket::http::Status;
 use rocket::serde::json::json;
 use serde::Deserialize;
 
+#[derive(Debug, serde::Deserialize)]
+pub struct Env {
+    pub contract: String,
+    pub database_url: String,
+    pub nearblocks_api_key: String,
+    pub fastnear_api_key: String,
+    // pub network: String,
+}
+
 #[derive(Deserialize)]
 pub struct ChangeLog {
     pub block_id: u64,
@@ -45,11 +54,6 @@ struct QueryResponseResult {
     result: Vec<i32>,
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct Env {
-    fastnear_api_key: String,
-}
-
 impl Default for RpcService {
     fn default() -> Self {
         Self {
@@ -60,7 +64,7 @@ impl Default for RpcService {
 }
 
 impl RpcService {
-    pub fn new(id: &AccountId) -> Self {
+    pub fn new() -> Self {
         dotenvy::dotenv().ok();
 
         let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
@@ -76,7 +80,21 @@ impl RpcService {
 
         Self {
             network,
-            contract: Contract(id.clone()),
+            contract: Contract(env.contract.parse::<AccountId>().unwrap()),
+        }
+    }
+
+    pub fn mainnet(contract: AccountId) -> Self {
+        Self {
+            network: NetworkConfig::mainnet(),
+            contract: Contract(contract),
+        }
+    }
+
+    pub fn sandbox(network: NetworkConfig, contract: AccountId) -> Self {
+        Self {
+            network: NetworkConfig::from(network),
+            contract: Contract(contract),
         }
     }
 

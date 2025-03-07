@@ -6,7 +6,7 @@ use types::Transaction;
 pub mod proposal;
 pub mod rfp;
 pub mod transactions;
-
+use crate::rpc_service::Env;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ApiResponse {
     #[serde(default)]
@@ -23,20 +23,19 @@ pub struct ApiClient {
 
 impl Default for ApiClient {
     fn default() -> Self {
-        Self {
-            base_url: "https://api.nearblocks.io/".to_string(),
-            client: Client::new(),
-            api_key: "".to_string(),
-        }
+        Self::new()
     }
 }
 
 impl ApiClient {
-    pub fn new(api_key: String) -> Self {
+    pub fn new() -> Self {
+        dotenvy::dotenv().ok();
+        let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
+
         Self {
             base_url: "https://api.nearblocks.io/".to_string(),
             client: Client::new(),
-            api_key,
+            api_key: env.nearblocks_api_key,
         }
     }
 

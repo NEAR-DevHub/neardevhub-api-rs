@@ -9,7 +9,6 @@ use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
 use devhub_shared::proposal::VersionedProposal;
-use near_account_id::AccountId;
 use rocket::delete;
 use rocket::serde::json::Json;
 use rocket::{get, http::Status, State};
@@ -84,7 +83,7 @@ async fn get_proposals(
     offset: Option<i64>,
     filters: Option<GetProposalFilters>,
     db: &State<DB>,
-    contract: &State<AccountId>,
+    rpc_service: &State<RpcService>,
 ) -> Option<Json<PaginatedResponse<ProposalWithLatestSnapshotView>>> {
     let order = order.unwrap_or("id_desc");
     let limit = limit.unwrap_or(10);
@@ -94,7 +93,7 @@ async fn get_proposals(
 
     let _ = fetch_changelog_from_rpc(
         db.inner(),
-        contract.inner(),
+        rpc_service.inner(),
         Some(last_updated_info.after_block),
     )
     .await;
@@ -114,13 +113,13 @@ async fn get_proposals(
 async fn get_proposal_with_all_snapshots(
     proposal_id: i32,
     db: &State<DB>,
-    contract: &State<AccountId>,
+    rpc_service: &State<RpcService>,
 ) -> Option<Json<Vec<ProposalSnapshotRecord>>> {
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
     let _ = fetch_changelog_from_rpc(
         db.inner(),
-        contract.inner(),
+        rpc_service.inner(),
         Some(last_updated_info.after_block),
     )
     .await;
@@ -181,12 +180,8 @@ async fn reset(db: &State<DB>) -> Result<(), Status> {
 
 #[utoipa::path(get, path = "/proposals/sync_from_start")]
 #[get("/sync_from_start")]
-async fn sync_from_start(
-    db: &State<DB>,
-    contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
-) -> Result<(), Status> {
-    update_nearblocks_data(db, contract, nearblocks_api_key, Some(0)).await;
+async fn sync_from_start(db: &State<DB>, rpc_service: &State<RpcService>) -> Result<(), Status> {
+    update_nearblocks_data(db, rpc_service, Some(0)).await;
 
     Ok(())
 }
@@ -221,9 +216,8 @@ async fn get_timestamp(db: &State<DB>) -> Result<Json<LastUpdatedInfo>, Status> 
 #[get("/<proposal_id>")]
 async fn get_proposal(
     proposal_id: i32,
-    contract: &State<AccountId>,
+    rpc_service: &State<RpcService>,
 ) -> Result<Json<VersionedProposal>, rocket::http::Status> {
-    let rpc_service = RpcService::new(contract);
     // We should also add rate limiting to this endpoint
     match rpc_service.get_proposal(proposal_id).await {
         Ok(proposal) => Ok(Json(proposal.data)),

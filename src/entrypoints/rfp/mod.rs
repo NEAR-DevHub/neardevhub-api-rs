@@ -6,7 +6,6 @@ use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
 use devhub_shared::rfp::VersionedRFP;
-use near_account_id::AccountId;
 use rocket::serde::json::Json;
 use rocket::{delete, get, http::Status, State};
 use std::convert::TryInto;
@@ -79,7 +78,7 @@ async fn get_rfps(
     offset: Option<i64>,
     filters: Option<GetRfpFilters>,
     db: &State<DB>,
-    contract: &State<AccountId>,
+    rpc_service: &State<RpcService>,
 ) -> Option<Json<PaginatedResponse<RfpWithLatestSnapshotView>>> {
     let order = order.unwrap_or("id_desc");
     let limit = limit.unwrap_or(10);
@@ -89,7 +88,7 @@ async fn get_rfps(
 
     let _ = fetch_changelog_from_rpc(
         db.inner(),
-        contract.inner(),
+        rpc_service.inner(),
         Some(last_updated_info.after_block),
     )
     .await;
@@ -106,8 +105,8 @@ async fn get_rfps(
 
 #[utoipa::path(get, path = "/rfp/{rfp_id}")]
 #[get("/<rfp_id>")]
-async fn get_rfp(rfp_id: i32, contract: &State<AccountId>) -> Result<Json<VersionedRFP>, Status> {
-    match RpcService::new(contract).get_rfp(rfp_id).await {
+async fn get_rfp(rfp_id: i32) -> Result<Json<VersionedRFP>, Status> {
+    match RpcService::new().get_rfp(rfp_id).await {
         Ok(rfp) => Ok(Json(rfp.data)),
         Err(e) => {
             eprintln!("In /rfp/rfp_id; Failed to get rfp from RPC: {:?}", e);
@@ -121,13 +120,13 @@ async fn get_rfp(rfp_id: i32, contract: &State<AccountId>) -> Result<Json<Versio
 async fn get_rfp_with_snapshots(
     rfp_id: i64,
     db: &State<DB>,
-    contract: &State<AccountId>,
+    rpc_service: &State<RpcService>,
 ) -> Option<Json<Vec<RfpSnapshotRecord>>> {
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
     let _ = fetch_changelog_from_rpc(
         db.inner(),
-        contract.inner(),
+        rpc_service.inner(),
         Some(last_updated_info.after_block),
     )
     .await;

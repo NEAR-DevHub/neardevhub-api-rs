@@ -2,6 +2,7 @@ use super::*;
 use anyhow::Result;
 use devhub_cache_api::{
     db::db_types::{ProposalWithLatestSnapshotView, RfpWithLatestSnapshotView},
+    rpc_service::RpcService,
     PaginatedResponse,
 };
 use near_sdk::{AccountIdRef, NearToken};
@@ -71,9 +72,9 @@ async fn setup_test_env() -> Result<(Worker<Sandbox>, Contract, Account)> {
 // RUST_BACKTRACE=1 cargo test -p devhub-cache-api test_proposal_and_rfp_indexing -- --nocapture
 #[tokio::test]
 async fn test_proposal_and_rfp_indexing() -> Result<()> {
-    let (worker, devhub_contract, _) = setup_test_env().await?;
+    let (worker, devhub_contract, contract_account) = setup_test_env().await?;
 
-    // Create a proposal
+    // Create a proposal using near-api-rs
     let proposal_result = devhub_contract
         .call("add_proposal")
         .args_json(json!({
@@ -104,6 +105,7 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
     if !proposal_result.is_success() {
         println!("Proposal creation failed with error: {:?}", proposal_result);
     }
+
     assert!(proposal_result.is_success());
 
     // Time travel
@@ -168,8 +170,10 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
     // Wait for indexing
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
+    println!("Contract account ID: {:?}", contract_account.id());
+    let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
     // Index data through the API
-    let client = Client::tracked(devhub_cache_api::rocket())
+    let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
 

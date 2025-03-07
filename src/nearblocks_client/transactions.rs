@@ -3,16 +3,20 @@ use crate::nearblocks_client;
 use crate::nearblocks_client::proposal::{handle_edit_proposal, handle_set_block_height_callback};
 use crate::nearblocks_client::rfp::{handle_edit_rfp, handle_set_rfp_block_height_callback};
 use crate::nearblocks_client::types::Transaction;
+use crate::rpc_service::{Env, RpcService};
 use near_account_id::AccountId;
 use rocket::{http::Status, State};
 
 pub async fn fetch_all_new_transactions(
     nearblocks_client: &nearblocks_client::ApiClient,
-    contract: &AccountId,
     after_block: Option<i64>,
 ) -> (Vec<Transaction>, String) {
     let mut all_transactions = Vec::new();
     let mut current_cursor = "".to_string();
+
+    dotenvy::dotenv().ok();
+    let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
+    let contract: AccountId = env.contract.parse().unwrap();
 
     loop {
         let response = match nearblocks_client
@@ -57,20 +61,19 @@ pub async fn fetch_all_new_transactions(
 }
 
 pub async fn update_nearblocks_data(
-    db: &DB,
-    contract: &AccountId,
-    nearblocks_api_key: &str,
+    db: &State<DB>,
+    rpc_service: &State<RpcService>,
     after_block: Option<i64>,
 ) {
-    let nearblocks_client = nearblocks_client::ApiClient::new(nearblocks_api_key.to_string());
+    let nearblocks_client = nearblocks_client::ApiClient::new();
 
     let (all_transactions, current_cursor) =
-        fetch_all_new_transactions(&nearblocks_client, contract, after_block).await;
+        fetch_all_new_transactions(&nearblocks_client, after_block).await;
 
     println!("Total transactions fetched: {}", all_transactions.len());
 
     if let Err(e) =
-        nearblocks_client::transactions::process(&all_transactions, db.into(), contract).await
+        nearblocks_client::transactions::process(&all_transactions, db, rpc_service).await
     {
         eprintln!("Error processing transactions: {:?}", e);
         return;
@@ -91,7 +94,7 @@ pub async fn update_nearblocks_data(
 pub async fn process(
     transactions: &[Transaction],
     db: &State<DB>,
-    contract: &AccountId,
+    rpc_service: &State<RpcService>,
 ) -> Result<(), Status> {
     for transaction in transactions.iter() {
         if let Some(action) = transaction
@@ -109,40 +112,43 @@ pub async fn process(
             }
             let result = match action.method.as_deref().unwrap_or("") {
                 "set_block_height_callback" => {
-                    handle_set_block_height_callback(transaction.to_owned(), db, contract).await
+                    handle_set_block_height_callback(transaction.to_owned(), db, rpc_service).await
                 }
-                "edit_proposal" => handle_edit_proposal(transaction.to_owned(), db, contract).await,
+                "edit_proposal" => {
+                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
+                }
                 "edit_proposal_timeline" => {
-                    handle_edit_proposal(transaction.to_owned(), db, contract).await
+                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
                 }
                 "edit_proposal_versioned_timeline" => {
-                    handle_edit_proposal(transaction.to_owned(), db, contract).await
+                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
                 }
                 "edit_proposal_linked_rfp" => {
-                    handle_edit_proposal(transaction.to_owned(), db, contract).await
+                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
                 }
                 "edit_proposal_internal" => {
-                    handle_edit_proposal(transaction.to_owned(), db, contract).await
+                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
                 }
                 "edit_rfp_timeline" => {
                     println!("edit_rfp_timeline");
-                    handle_edit_rfp(transaction.to_owned(), db, contract).await
+                    handle_edit_rfp(transaction.to_owned(), db, rpc_service).await
                 }
                 "edit_rfp" => {
                     println!("edit_rfp");
-                    handle_edit_rfp(transaction.to_owned(), db, contract).await
+                    handle_edit_rfp(transaction.to_owned(), db, rpc_service).await
                 }
                 "edit_rfp_internal" => {
                     println!("edit_rfp_internal");
-                    handle_edit_rfp(transaction.to_owned(), db, contract).await
+                    handle_edit_rfp(transaction.to_owned(), db, rpc_service).await
                 }
                 "cancel_rfp" => {
                     println!("cancel_rfp");
-                    handle_edit_rfp(transaction.to_owned(), db, contract).await
+                    handle_edit_rfp(transaction.to_owned(), db, rpc_service).await
                 }
                 "set_rfp_block_height_callback" => {
                     println!("set_rfp_block_height_callback");
-                    handle_set_rfp_block_height_callback(transaction.to_owned(), db, contract).await
+                    handle_set_rfp_block_height_callback(transaction.to_owned(), db, rpc_service)
+                        .await
                 }
                 _ => {
                     if action.action == "FUNCTION_CALL" {
@@ -167,15 +173,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_all_transactions() {
-        let api_key = std::env::var("NEARBLOCKS_API_KEY")
-            .expect("NEARBLOCKS_API_KEY environment variable not set");
-        let client = nearblocks_client::ApiClient::new(api_key);
-        let contract: AccountId = "infrastructure-committee.near"
-            .parse()
-            .expect("Invalid account ID");
-
-        let (transactions, current_cursor) =
-            fetch_all_new_transactions(&client, &contract, Some(0)).await;
+        let client = nearblocks_client::ApiClient::new();
+        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0)).await;
 
         // Check total count
         assert!(

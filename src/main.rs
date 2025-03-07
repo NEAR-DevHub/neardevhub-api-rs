@@ -31,5 +31,5 @@ pub fn separate_number_and_text(s: &str) -> (Option<i32>, String) {
 
 #[rocket::launch]
 fn rocket() -> _ {
-    devhub_cache_api::rocket()
+    devhub_cache_api::rocket(None)
 }

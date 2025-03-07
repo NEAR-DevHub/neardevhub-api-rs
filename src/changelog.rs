@@ -5,14 +5,11 @@ use crate::entrypoints::rfp::rfp_types::FromContractRFP;
 use crate::rpc_service::{ChangeLog, ChangeLogType, RpcService};
 use devhub_shared::proposal::VersionedProposal;
 use devhub_shared::rfp::VersionedRFP;
-use near_account_id::AccountId;
-
 pub async fn fetch_changelog_from_rpc(
     db: &DB,
-    contract: &AccountId,
+    rpc_service: &RpcService,
     after_block: Option<i64>,
 ) -> anyhow::Result<()> {
-    let rpc_service = RpcService::new(contract);
     let result = match rpc_service.get_change_log_since(after_block.unwrap()).await {
         Ok(change_log) => change_log,
         Err(e) => {
@@ -25,10 +22,10 @@ pub async fn fetch_changelog_from_rpc(
         // Get the latest proposal
         match change.change_log_type {
             ChangeLogType::Proposal(proposal_id) => {
-                handle_proposal_change(db, &rpc_service, proposal_id, &change).await?;
+                handle_proposal_change(db, rpc_service, proposal_id, &change).await?;
             }
             ChangeLogType::RFP(rfp_id) => {
-                handle_rfp_change(db, &rpc_service, rfp_id, &change).await?;
+                handle_rfp_change(db, rpc_service, rfp_id, &change).await?;
             }
         }
     }
