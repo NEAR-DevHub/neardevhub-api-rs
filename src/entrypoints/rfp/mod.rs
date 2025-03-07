@@ -35,7 +35,7 @@ async fn search(
 
     match result {
         Ok((rfps, total)) => Some(Json(PaginatedResponse::new(
-            rfps.into_iter().map(Into::into).collect(),
+            rfps.into_iter().collect(),
             1,
             limit.try_into().unwrap(),
             total.try_into().unwrap(),
@@ -97,7 +97,7 @@ async fn get_rfps(
     let (rfps, total) = fetch_rfps(db, limit, order, offset, filters).await;
 
     Some(Json(PaginatedResponse::new(
-        rfps.into_iter().map(Into::into).collect(),
+        rfps.into_iter().collect(),
         1,
         limit.try_into().unwrap(),
         total.try_into().unwrap(),

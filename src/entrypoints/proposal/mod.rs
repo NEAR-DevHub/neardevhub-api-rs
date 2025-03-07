@@ -4,6 +4,7 @@ use crate::db::db_types::{
     LastUpdatedInfo, ProposalSnapshotRecord, ProposalWithLatestSnapshotView,
 };
 use crate::db::DB;
+use crate::nearblocks_client::transactions::update_nearblocks_data;
 use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
@@ -39,7 +40,7 @@ async fn search(
 
     match result {
         Ok((proposals, total)) => Some(Json(PaginatedResponse::new(
-            proposals.clone().into_iter().map(Into::into).collect(),
+            proposals.clone().into_iter().collect(),
             1,
             limit.try_into().unwrap(),
             total.try_into().unwrap(),
@@ -101,7 +102,7 @@ async fn get_proposals(
     let (proposals, total) = fetch_proposals(db.inner(), limit, order, offset, filters).await;
 
     Some(Json(PaginatedResponse::new(
-        proposals.into_iter().map(Into::into).collect(),
+        proposals.into_iter().collect(),
         1,
         limit.try_into().unwrap(),
         total.try_into().unwrap(),
@@ -178,6 +179,18 @@ async fn reset(db: &State<DB>) -> Result<(), Status> {
     }
 }
 
+#[utoipa::path(get, path = "/proposals/sync_from_start")]
+#[get("/sync_from_start")]
+async fn sync_from_start(
+    db: &State<DB>,
+    contract: &State<AccountId>,
+    nearblocks_api_key: &State<String>,
+) -> Result<(), Status> {
+    update_nearblocks_data(db, contract, nearblocks_api_key, Some(0)).await;
+
+    Ok(())
+}
+
 // TODO Remove this once we go in production or put it behind authentication or a flag
 #[get("/info/clean")]
 async fn clean(db: &State<DB>) -> Result<(), Status> {
@@ -250,6 +263,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
                     reset,
                     set_cursor,
                     set_block,
+                    sync_from_start,
                 ],
             )
             .mount(

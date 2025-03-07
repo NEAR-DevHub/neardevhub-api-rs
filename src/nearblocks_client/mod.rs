@@ -3,6 +3,8 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 pub mod types;
 use types::Transaction;
+pub mod proposal;
+pub mod rfp;
 pub mod transactions;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

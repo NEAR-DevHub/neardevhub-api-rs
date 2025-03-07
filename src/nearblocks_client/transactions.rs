@@ -1,6 +1,10 @@
+use crate::db::DB;
 use crate::nearblocks_client;
+use crate::nearblocks_client::proposal::{handle_edit_proposal, handle_set_block_height_callback};
+use crate::nearblocks_client::rfp::{handle_edit_rfp, handle_set_rfp_block_height_callback};
 use crate::nearblocks_client::types::Transaction;
 use near_account_id::AccountId;
+use rocket::{http::Status, State};
 
 pub async fn fetch_all_new_transactions(
     nearblocks_client: &nearblocks_client::ApiClient,
@@ -50,6 +54,110 @@ pub async fn fetch_all_new_transactions(
     }
 
     (all_transactions, current_cursor)
+}
+
+pub async fn update_nearblocks_data(
+    db: &DB,
+    contract: &AccountId,
+    nearblocks_api_key: &str,
+    after_block: Option<i64>,
+) {
+    let nearblocks_client = nearblocks_client::ApiClient::new(nearblocks_api_key.to_string());
+
+    let (all_transactions, current_cursor) =
+        fetch_all_new_transactions(&nearblocks_client, contract, after_block).await;
+
+    println!("Total transactions fetched: {}", all_transactions.len());
+
+    if let Err(e) =
+        nearblocks_client::transactions::process(&all_transactions, db.into(), contract).await
+    {
+        eprintln!("Error processing transactions: {:?}", e);
+        return;
+    }
+
+    if let Some(transaction) = all_transactions.last() {
+        let timestamp_nano = transaction.block_timestamp.parse::<i64>().unwrap();
+        let _ = db
+            .set_last_updated_info(
+                timestamp_nano,
+                transaction.block.block_height,
+                current_cursor,
+            )
+            .await;
+    }
+}
+
+pub async fn process(
+    transactions: &[Transaction],
+    db: &State<DB>,
+    contract: &AccountId,
+) -> Result<(), Status> {
+    for transaction in transactions.iter() {
+        if let Some(action) = transaction
+            .actions
+            .as_ref()
+            .and_then(|actions| actions.first())
+        {
+            if !transaction.receipt_outcome.status {
+                eprintln!(
+                    "Proposal receipt outcome status is {:?}",
+                    transaction.receipt_outcome.status
+                );
+                // eprintln!("On transaction: {:?}", transaction);
+                continue;
+            }
+            let result = match action.method.as_deref().unwrap_or("") {
+                "set_block_height_callback" => {
+                    handle_set_block_height_callback(transaction.to_owned(), db, contract).await
+                }
+                "edit_proposal" => handle_edit_proposal(transaction.to_owned(), db, contract).await,
+                "edit_proposal_timeline" => {
+                    handle_edit_proposal(transaction.to_owned(), db, contract).await
+                }
+                "edit_proposal_versioned_timeline" => {
+                    handle_edit_proposal(transaction.to_owned(), db, contract).await
+                }
+                "edit_proposal_linked_rfp" => {
+                    handle_edit_proposal(transaction.to_owned(), db, contract).await
+                }
+                "edit_proposal_internal" => {
+                    handle_edit_proposal(transaction.to_owned(), db, contract).await
+                }
+                "edit_rfp_timeline" => {
+                    println!("edit_rfp_timeline");
+                    handle_edit_rfp(transaction.to_owned(), db, contract).await
+                }
+                "edit_rfp" => {
+                    println!("edit_rfp");
+                    handle_edit_rfp(transaction.to_owned(), db, contract).await
+                }
+                "edit_rfp_internal" => {
+                    println!("edit_rfp_internal");
+                    handle_edit_rfp(transaction.to_owned(), db, contract).await
+                }
+                "cancel_rfp" => {
+                    println!("cancel_rfp");
+                    handle_edit_rfp(transaction.to_owned(), db, contract).await
+                }
+                "set_rfp_block_height_callback" => {
+                    println!("set_rfp_block_height_callback");
+                    handle_set_rfp_block_height_callback(transaction.to_owned(), db, contract).await
+                }
+                _ => {
+                    if action.action == "FUNCTION_CALL" {
+                        // println!("Unhandled method: {:?}", action.method.as_ref().unwrap());
+                    } else {
+                        // println!("Unhandled action: {:?}", action.action);
+                    }
+                    continue;
+                }
+            };
+            result?;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
