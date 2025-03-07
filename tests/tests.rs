@@ -1,21 +1,25 @@
 use devhub_shared::proposal::{Proposal, VersionedProposal};
 use futures::future::join_all;
 
-use crate::db::db_types::LastUpdatedInfo;
-use crate::entrypoints::proposal::proposal_types::ProposalBodyFields;
-use crate::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
-use crate::rpc_service::RpcService;
-use crate::{db::db_types::ProposalWithLatestSnapshotView, types::PaginatedResponse, Env};
-use crate::{separate_number_and_text, timestamp_to_date_string};
+use devhub_cache_api::db::db_types::LastUpdatedInfo;
+use devhub_cache_api::entrypoints::proposal::proposal_types::ProposalBodyFields;
+use devhub_cache_api::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
+use devhub_cache_api::rpc_service::RpcService;
+use devhub_cache_api::{
+    db::db_types::ProposalWithLatestSnapshotView, separate_number_and_text,
+    timestamp_to_date_string, types::PaginatedResponse, Env,
+};
 use futures::StreamExt;
 use near_sdk::AccountId;
 use serde_json::Value;
+
+mod test_env;
 
 #[rocket::async_test]
 async fn test_proposal_ids_continuous_name_status_matches() {
     use rocket::local::asynchronous::Client;
 
-    let client = Client::tracked(super::rocket())
+    let client = Client::tracked(devhub_cache_api::rocket())
         .await
         .expect("valid `Rocket`");
     let offset = 100;
@@ -101,7 +105,7 @@ async fn test_proposal_ids_continuous_name_status_matches() {
 async fn test_if_the_last_ten_will_get_indexed() {
     use rocket::local::asynchronous::Client;
 
-    let client = Client::tracked(super::rocket())
+    let client = Client::tracked(devhub_cache_api::rocket())
         .await
         .expect("valid `Rocket`");
 
@@ -298,8 +302,7 @@ async fn test_all_proposals_are_indexed() {
 fn test_index() {
     use rocket::local::blocking::Client;
 
-    // Construct a client to use for dispatching requests.
-    let client = Client::tracked(super::rocket()).expect("valid `Rocket`");
+    let client = Client::tracked(devhub_cache_api::rocket()).expect("valid `Rocket`");
 
     // Dispatch a request to 'GET /' and validate the response.
     let response = client.get("/").dispatch();
@@ -362,7 +365,7 @@ fn test_cors_configuration() {
     use rocket::http::{Header, Status};
     use rocket::local::blocking::Client;
 
-    let client = Client::tracked(super::rocket()).expect("valid Rocket instance");
+    let client = Client::tracked(devhub_cache_api::rocket()).expect("valid Rocket instance");
 
     // Test allowed origin
     let res = client
@@ -401,7 +404,7 @@ fn test_custom_error_handler() {
     use rocket::http::Status;
     use rocket::local::blocking::Client;
 
-    let client = Client::tracked(super::rocket()).expect("valid Rocket instance");
+    let client = Client::tracked(devhub_cache_api::rocket()).expect("valid Rocket instance");
 
     // Test 404 Not Found
     let response = client.get("/nonexistent_route").dispatch();
@@ -416,7 +419,7 @@ fn test_custom_error_handler() {
 async fn test_route_test() {
     use rocket::local::asynchronous::Client;
 
-    let client = Client::tracked(super::rocket())
+    let client = Client::tracked(devhub_cache_api::rocket())
         .await
         .expect("valid Rocket instance");
 
