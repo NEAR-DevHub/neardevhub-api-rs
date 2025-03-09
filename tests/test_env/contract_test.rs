@@ -1,7 +1,7 @@
 use super::*;
 use anyhow::Result;
 use devhub_cache_api::{
-    db::db_types::{ProposalWithLatestSnapshotView, RfpWithLatestSnapshotView},
+    db::db_types::{LastUpdatedInfo, ProposalWithLatestSnapshotView, RfpWithLatestSnapshotView},
     rpc_service::RpcService,
     PaginatedResponse,
 };
@@ -116,20 +116,26 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
     let rfp_result = devhub_contract
         .call("add_rfp")
         .args_json(json!({
-            "body": {
-                "rfp_body_version": "V0",
-                "name": "Some RFP",
-                "description": "some description",
-                "summary": "sum",
-                "timeline": {"status": "ACCEPTING_SUBMISSIONS"},
-                "submission_deadline": "1707821848175250170"
-            },
-            "labels": [],
+          "labels": [],
+          "body": {
+            "rfp_body_version": "V0",
+            "name": "Multichain One Click Connect",
+            "description": "Google Document -->  make all inquiries or comments on this thread in the portal.",
+            "summary": "As more applications try to simplify the onboarding process by abstracting wallet creation, users often find themselves isolated within individual apps. lacking the necessary crypto and wallet knowledge to easily navigate between them. ",
+            "submission_deadline": "1739318400000000000",
+            "timeline": {
+              "status": "ACCEPTING_SUBMISSIONS"
+            }
+          }
         }))
         .deposit(NearToken::from_near(1))
         .max_gas()
         .transact()
         .await?;
+
+    if !rfp_result.is_success() {
+        println!("RFP creation failed with error: {:?}", rfp_result);
+    }
 
     println!("RFP Result: {:?}", rfp_result);
     assert!(rfp_result.is_success());
@@ -171,11 +177,20 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
     println!("Contract account ID: {:?}", contract_account.id());
+
     let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
     // Index data through the API
     let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
+
+    // Reset the last_updated_info to ensure we catch all changes
+    let reset_response = client.get("/proposals/info/reset").dispatch().await;
+    assert!(reset_response.status() == Status::Ok);
+
+    let info_response = client.get("/proposals/info").dispatch().await;
+    let info_result = info_response.into_json::<LastUpdatedInfo>().await.unwrap();
+    assert!(info_result.after_block == 0);
 
     // Indexing
     let indexing_response = client.get("/proposals").dispatch().await;
@@ -186,9 +201,13 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
         .unwrap();
     assert!(!indexing_result.records.is_empty());
 
+    let info_response = client.get("/proposals/info").dispatch().await;
+    let info_result = info_response.into_json::<LastUpdatedInfo>().await.unwrap();
+    assert!(info_result.after_block > 0);
+
     // Check search
     let search_response = client
-        .get("/proposals/search/Test Proposal")
+        .get("/proposals/search/Test%20Proposal")
         .dispatch()
         .await;
     assert!(search_response.status() == Status::Ok);
@@ -198,7 +217,19 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
         .unwrap();
     assert!(!search_result.records.is_empty());
 
-    let rfp_search_response = client.get("/rfps/search/Some RFP").dispatch().await;
+    let rfps_response = client.get("/rfps").dispatch().await;
+    assert!(rfps_response.status() == Status::Ok);
+
+    let rfp_result = rfps_response
+        .into_json::<PaginatedResponse<RfpWithLatestSnapshotView>>()
+        .await
+        .unwrap();
+    assert!(!rfp_result.records.is_empty());
+
+    let rfp_search_response = client
+        .get("/rfps/search/Multichain%20One%20Click%20Connect")
+        .dispatch()
+        .await;
     assert!(rfp_search_response.status() == Status::Ok);
     let rfp_search_result = rfp_search_response
         .into_json::<PaginatedResponse<RfpWithLatestSnapshotView>>()

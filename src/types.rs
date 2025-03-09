@@ -13,10 +13,17 @@ pub struct PaginatedResponse<T: Serialize> {
     pub total_pages: u64,
     pub limit: u64,
     pub total_records: u64,
+    pub newly_indexed: usize,
 }
 
 impl<T: Serialize> PaginatedResponse<T> {
-    pub fn new(records: Vec<T>, page: u64, limit: u64, total_records: u64) -> Self {
+    pub fn new(
+        records: Vec<T>,
+        page: u64,
+        limit: u64,
+        total_records: u64,
+        newly_indexed: Option<usize>,
+    ) -> Self {
         let extra_page = if total_records % limit == 0 { 0 } else { 1 };
         let total_pages = (total_records / limit) + extra_page;
         Self {
@@ -25,6 +32,7 @@ impl<T: Serialize> PaginatedResponse<T> {
             total_pages,
             limit,
             total_records,
+            newly_indexed: newly_indexed.unwrap_or(0),
         }
     }
 }

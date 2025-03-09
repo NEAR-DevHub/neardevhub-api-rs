@@ -20,11 +20,11 @@ pub mod proposal_types;
 ))]
 #[get("/search/<input>")]
 async fn search(
-    input: String,
+    input: &str,
     db: &State<DB>,
 ) -> Option<Json<PaginatedResponse<ProposalWithLatestSnapshotView>>> {
     let limit = 10;
-    let (number, _) = separate_number_and_text(&input);
+    let (number, _) = separate_number_and_text(input);
 
     let result = if let Some(number) = number {
         match db.get_proposal_with_latest_snapshot_by_id(number).await {
@@ -43,6 +43,7 @@ async fn search(
             1,
             limit.try_into().unwrap(),
             total.try_into().unwrap(),
+            None,
         ))),
         Err(e) => {
             eprintln!("Error fetching proposals: {:?}", e);
@@ -91,7 +92,7 @@ async fn get_proposals(
 
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    let _ = fetch_changelog_from_rpc(
+    let change_log_count = fetch_changelog_from_rpc(
         db.inner(),
         rpc_service.inner(),
         Some(last_updated_info.after_block),
@@ -105,6 +106,7 @@ async fn get_proposals(
         1,
         limit.try_into().unwrap(),
         total.try_into().unwrap(),
+        Some(change_log_count.unwrap_or(0)),
     )))
 }
 

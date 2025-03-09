@@ -9,7 +9,7 @@ pub async fn fetch_changelog_from_rpc(
     db: &DB,
     rpc_service: &RpcService,
     after_block: Option<i64>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<usize> {
     let result = match rpc_service.get_change_log_since(after_block.unwrap()).await {
         Ok(change_log) => change_log,
         Err(e) => {
@@ -18,7 +18,7 @@ pub async fn fetch_changelog_from_rpc(
         }
     };
 
-    for change in result {
+    for change in result.clone() {
         // Get the latest proposal
         match change.change_log_type {
             ChangeLogType::Proposal(proposal_id) => {
@@ -29,7 +29,7 @@ pub async fn fetch_changelog_from_rpc(
             }
         }
     }
-    Ok(())
+    Ok(result.len())
 }
 
 async fn handle_proposal_change(
@@ -110,6 +110,7 @@ async fn handle_rfp_change(
     let author_id = match versioned_rfp.clone() {
         VersionedRFP::V0(rfp) => rfp.author_id,
     };
+
     DB::upsert_rfp(&mut tx, rfp_id, author_id.to_string())
         .await
         .map_err(|e| {

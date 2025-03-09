@@ -38,6 +38,7 @@ async fn search(
             1,
             limit.try_into().unwrap(),
             total.try_into().unwrap(),
+            None,
         ))),
         Err(e) => {
             eprintln!("Error fetching rfps: {:?}", e);
@@ -86,7 +87,7 @@ async fn get_rfps(
 
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    let _ = fetch_changelog_from_rpc(
+    let change_log_count = fetch_changelog_from_rpc(
         db.inner(),
         rpc_service.inner(),
         Some(last_updated_info.after_block),
@@ -100,6 +101,7 @@ async fn get_rfps(
         1,
         limit.try_into().unwrap(),
         total.try_into().unwrap(),
+        Some(change_log_count.unwrap_or(0)),
     )))
 }
 

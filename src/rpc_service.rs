@@ -17,14 +17,14 @@ pub struct Env {
     // pub network: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ChangeLog {
     pub block_id: u64,
     pub block_timestamp: u64,
     pub change_log_type: ChangeLogType,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub enum ChangeLogType {
     Proposal(ProposalId),
     RFP(RFPId),
@@ -37,8 +37,8 @@ pub struct RpcResponse {
 
 #[derive(Clone)]
 pub struct RpcService {
-    network: NetworkConfig,
-    contract: Contract,
+    pub network: NetworkConfig,
+    pub contract: Contract,
 }
 
 #[derive(Deserialize)]
