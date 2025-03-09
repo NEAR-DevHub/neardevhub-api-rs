@@ -43,11 +43,10 @@ pub fn separate_number_and_text(input: &str) -> (Option<i32>, String) {
 }
 
 pub fn timestamp_to_date_string(timestamp_ns: i64) -> String {
-    use chrono::{DateTime, NaiveDateTime, Utc};
+    use chrono::{DateTime, Utc};
 
     let seconds = timestamp_ns / 1_000_000_000;
-    let naive = NaiveDateTime::from_timestamp_opt(seconds, 0).unwrap_or_default();
-    let datetime: DateTime<Utc> = DateTime::from_naive_utc_and_offset(naive, Utc);
+    let datetime: DateTime<Utc> = DateTime::from_timestamp(seconds, 0).unwrap_or_default();
 
     datetime.format("%Y-%m-%d").to_string()
 }

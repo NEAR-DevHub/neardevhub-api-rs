@@ -137,7 +137,6 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
         println!("RFP creation failed with error: {:?}", rfp_result);
     }
 
-    println!("RFP Result: {:?}", rfp_result);
     assert!(rfp_result.is_success());
 
     // Get_changelog from the RPC from contract
@@ -148,7 +147,6 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
         .await?
         .json()?;
 
-    println!("Full changelog: {:?}", change_log_result);
     assert!(change_log_result.as_array().unwrap().len() == 2);
 
     // Get the block_id from the first change
@@ -164,19 +162,13 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
         .await?
         .json()?;
 
-    println!(
-        "Changelog since block {}: {:?}",
-        first_block_id + 1,
-        change_log_since_result
-    );
-
     // assert change_log_since_result to only have the rfp change
     assert!(change_log_since_result.as_array().unwrap().len() == 1);
 
     // Wait for indexing
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
-    println!("Contract account ID: {:?}", contract_account.id());
+    eprintln!("Contract account ID: {:?}", contract_account.id());
 
     let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
     // Index data through the API
@@ -235,7 +227,6 @@ async fn test_proposal_and_rfp_indexing() -> Result<()> {
         .into_json::<PaginatedResponse<RfpWithLatestSnapshotView>>()
         .await
         .unwrap();
-    println!("RFP search response: {:?}", rfp_search_result);
     assert!(!rfp_search_result.records.is_empty());
 
     Ok(())
