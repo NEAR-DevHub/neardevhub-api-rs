@@ -28,7 +28,7 @@ anyhow = "1.0.76"
 rocket_cors = "0.6.0"
 utoipa-swagger-ui = { version = "7.1", features = ["rocket"] }
 reqwest = "0.12.8"
-near-api = "0.4.0"
+near-api = { version = "0.4.0", features = ["workspaces"] }
 near-jsonrpc-client = "0.15.1"
 regex = "1.11.1"
 base64 = "0.22.1"

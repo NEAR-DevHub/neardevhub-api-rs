@@ -1,12 +1,11 @@
 use self::rfp_types::*;
+use crate::changelog::fetch_changelog_from_rpc;
 use crate::db::db_types::{RfpSnapshotRecord, RfpWithLatestSnapshotView};
 use crate::db::DB;
-use crate::nearblocks_client::transactions::update_nearblocks_data;
 use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
 use devhub_shared::rfp::VersionedRFP;
-use near_account_id::AccountId;
 use rocket::serde::json::Json;
 use rocket::{delete, get, http::Status, State};
 use std::convert::TryInto;
@@ -35,10 +34,11 @@ async fn search(
 
     match result {
         Ok((rfps, total)) => Some(Json(PaginatedResponse::new(
-            rfps.into_iter().map(Into::into).collect(),
+            rfps.into_iter().collect(),
             1,
             limit.try_into().unwrap(),
             total.try_into().unwrap(),
+            None,
         ))),
         Err(e) => {
             eprintln!("Error fetching rfps: {:?}", e);
@@ -79,42 +79,36 @@ async fn get_rfps(
     offset: Option<i64>,
     filters: Option<GetRfpFilters>,
     db: &State<DB>,
-    contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
+    rpc_service: &State<RpcService>,
 ) -> Option<Json<PaginatedResponse<RfpWithLatestSnapshotView>>> {
     let order = order.unwrap_or("id_desc");
     let limit = limit.unwrap_or(10);
     let offset = offset.unwrap_or(0);
 
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
-    {
-        update_nearblocks_data(
-            db.inner(),
-            contract.inner(),
-            nearblocks_api_key.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    let change_log_count = fetch_changelog_from_rpc(
+        db.inner(),
+        rpc_service.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     let (rfps, total) = fetch_rfps(db, limit, order, offset, filters).await;
 
     Some(Json(PaginatedResponse::new(
-        rfps.into_iter().map(Into::into).collect(),
+        rfps.into_iter().collect(),
         1,
         limit.try_into().unwrap(),
         total.try_into().unwrap(),
+        Some(change_log_count.unwrap_or(0)),
     )))
 }
 
 #[utoipa::path(get, path = "/rfp/{rfp_id}")]
 #[get("/<rfp_id>")]
-async fn get_rfp(rfp_id: i32, contract: &State<AccountId>) -> Result<Json<VersionedRFP>, Status> {
-    match RpcService::new(contract).get_rfp(rfp_id).await {
+async fn get_rfp(rfp_id: i32) -> Result<Json<VersionedRFP>, Status> {
+    match RpcService::new().get_rfp(rfp_id).await {
         Ok(rfp) => Ok(Json(rfp.data)),
         Err(e) => {
             eprintln!("In /rfp/rfp_id; Failed to get rfp from RPC: {:?}", e);
@@ -128,31 +122,23 @@ async fn get_rfp(rfp_id: i32, contract: &State<AccountId>) -> Result<Json<Versio
 async fn get_rfp_with_snapshots(
     rfp_id: i64,
     db: &State<DB>,
-    contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
-) -> Result<Json<Vec<RfpSnapshotRecord>>, Status> {
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+    rpc_service: &State<RpcService>,
+) -> Option<Json<Vec<RfpSnapshotRecord>>> {
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
-    {
-        update_nearblocks_data(
-            db.inner(),
-            contract.inner(),
-            nearblocks_api_key.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    let _ = fetch_changelog_from_rpc(
+        db.inner(),
+        rpc_service.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     match db.get_rfp_with_all_snapshots(rfp_id).await {
         Err(e) => {
             eprintln!("Failed to get rfps: {:?}", e);
-            // Ok(Json(vec![]))
-            Err(Status::InternalServerError)
+            None
         }
-        Ok((result, _)) => Ok(Json(result)),
+        Ok(result) => Some(Json(result)),
     }
 }
 

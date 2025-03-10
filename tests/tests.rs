@@ -1,22 +1,33 @@
 use devhub_shared::proposal::{Proposal, VersionedProposal};
 use futures::future::join_all;
-use near_api::Contract;
 
-use crate::db::db_types::LastUpdatedInfo;
-use crate::entrypoints::proposal::proposal_types::ProposalBodyFields;
-use crate::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
-use crate::rpc_service::{self, RpcService};
-use crate::{db::db_types::ProposalWithLatestSnapshotView, types::PaginatedResponse, Env};
-use crate::{separate_number_and_text, timestamp_to_date_string};
+use devhub_cache_api::db::db_types::LastUpdatedInfo;
+use devhub_cache_api::entrypoints::proposal::proposal_types::ProposalBodyFields;
+use devhub_cache_api::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
+use devhub_cache_api::rpc_service::RpcService;
+use devhub_cache_api::{
+    db::db_types::ProposalWithLatestSnapshotView, separate_number_and_text,
+    timestamp_to_date_string, types::PaginatedResponse,
+};
 use futures::StreamExt;
 use near_sdk::AccountId;
-use serde_json::{json, Value};
+use serde_json::Value;
+
+mod test_env;
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Env {
+    pub contract: String,
+    pub database_url: String,
+    pub nearblocks_api_key: String,
+    pub fastnear_api_key: String,
+}
 
 #[rocket::async_test]
 async fn test_proposal_ids_continuous_name_status_matches() {
     use rocket::local::asynchronous::Client;
 
-    let client = Client::tracked(super::rocket())
+    let client = Client::tracked(devhub_cache_api::rocket(None))
         .await
         .expect("valid `Rocket`");
     let offset = 100;
@@ -31,11 +42,12 @@ async fn test_proposal_ids_continuous_name_status_matches() {
         .unwrap();
 
     let env = std::env::var("ENV").unwrap_or_else(|_| "LOCAL".to_string());
-    let result = if env == "GH_ACTION" {
-        let file = std::fs::File::open("test/result.json").expect("Unable to open file");
-        serde_json::from_reader(file).expect("Unable to parse JSON")
-    } else {
-        result
+    let result = match env.as_str() {
+        "GH_ACTION" => {
+            let file = std::fs::File::open("test/result.json").expect("Unable to open file");
+            serde_json::from_reader(file).expect("Unable to parse JSON")
+        }
+        _ => result,
     };
 
     assert_eq!(result.records.len(), 50, "Result records should be 50");
@@ -52,7 +64,7 @@ async fn test_proposal_ids_continuous_name_status_matches() {
 
     let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
     let contract_account_id: AccountId = env.contract.parse().unwrap();
-    let rpc_service = RpcService::new(&contract_account_id);
+    let rpc_service = RpcService::mainnet(contract_account_id);
 
     // Create a Vec of futures for all blockchain calls
     let futures = result.records.iter().enumerate().map(|(ndx, record)| {
@@ -102,7 +114,7 @@ async fn test_proposal_ids_continuous_name_status_matches() {
 async fn test_if_the_last_ten_will_get_indexed() {
     use rocket::local::asynchronous::Client;
 
-    let client = Client::tracked(super::rocket())
+    let client = Client::tracked(devhub_cache_api::rocket(None))
         .await
         .expect("valid `Rocket`");
 
@@ -111,7 +123,7 @@ async fn test_if_the_last_ten_will_get_indexed() {
     let contract_account_id: AccountId = contract_string.parse().unwrap();
 
     // Get all proposal ids from the RPC service
-    let rpc_service = RpcService::new(&contract_account_id);
+    let rpc_service = RpcService::mainnet(contract_account_id);
     let proposal_ids = rpc_service.get_all_proposal_ids().await.unwrap();
     let last_ten_ids: Vec<i32> = proposal_ids.iter().rev().take(10).cloned().collect();
 
@@ -261,7 +273,7 @@ async fn test_all_proposals_are_indexed() {
             .expect("Failed to get proposal_id");
 
         // rpc service
-        let rpc_service = RpcService::new(&account_id);
+        let rpc_service = RpcService::mainnet(account_id);
 
         // Get all proposal ids
         let proposal_ids = rpc_service.get_all_proposal_ids().await;
@@ -299,8 +311,7 @@ async fn test_all_proposals_are_indexed() {
 fn test_index() {
     use rocket::local::blocking::Client;
 
-    // Construct a client to use for dispatching requests.
-    let client = Client::tracked(super::rocket()).expect("valid `Rocket`");
+    let client = Client::tracked(devhub_cache_api::rocket(None)).expect("valid `Rocket`");
 
     // Dispatch a request to 'GET /' and validate the response.
     let response = client.get("/").dispatch();
@@ -363,7 +374,7 @@ fn test_cors_configuration() {
     use rocket::http::{Header, Status};
     use rocket::local::blocking::Client;
 
-    let client = Client::tracked(super::rocket()).expect("valid Rocket instance");
+    let client = Client::tracked(devhub_cache_api::rocket(None)).expect("valid Rocket instance");
 
     // Test allowed origin
     let res = client
@@ -402,7 +413,7 @@ fn test_custom_error_handler() {
     use rocket::http::Status;
     use rocket::local::blocking::Client;
 
-    let client = Client::tracked(super::rocket()).expect("valid Rocket instance");
+    let client = Client::tracked(devhub_cache_api::rocket(None)).expect("valid Rocket instance");
 
     // Test 404 Not Found
     let response = client.get("/nonexistent_route").dispatch();
@@ -417,7 +428,7 @@ fn test_custom_error_handler() {
 async fn test_route_test() {
     use rocket::local::asynchronous::Client;
 
-    let client = Client::tracked(super::rocket())
+    let client = Client::tracked(devhub_cache_api::rocket(None))
         .await
         .expect("valid Rocket instance");
 

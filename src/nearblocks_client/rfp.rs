@@ -4,13 +4,12 @@ use crate::nearblocks_client::types::Transaction;
 use crate::rpc_service::RpcService;
 use crate::{db::db_types::RfpSnapshotRecord, nearblocks_client::types::BLOCK_HEIGHT_OFFSET};
 use devhub_shared::rfp::VersionedRFP;
-use near_account_id::AccountId;
 use rocket::{http::Status, State};
 
 pub async fn handle_set_rfp_block_height_callback(
     transaction: Transaction,
     db: &State<DB>,
-    contract: &AccountId,
+    rpc_service: &State<RpcService>,
 ) -> Result<(), Status> {
     let action = transaction
         .actions
@@ -30,7 +29,6 @@ pub async fn handle_set_rfp_block_height_callback(
     .await
     .unwrap();
 
-    let rpc_service = RpcService::new(contract);
     let id = args.clone().rfp.id.try_into().unwrap();
 
     let versioned_rfp_fallback: VersionedRFP = args.clone().rfp.into();
@@ -79,9 +77,8 @@ fn get_rfp_id(transaction: &Transaction) -> Result<i32, &'static str> {
 pub async fn handle_edit_rfp(
     transaction: Transaction,
     db: &State<DB>,
-    contract: &AccountId,
+    rpc_service: &State<RpcService>,
 ) -> Result<(), Status> {
-    let rpc_service = RpcService::new(contract);
     let id = get_rfp_id(&transaction).map_err(|e| {
         eprintln!("Failed to get RFP ID: {}", e);
         Status::InternalServerError
