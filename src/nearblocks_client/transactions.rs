@@ -59,7 +59,7 @@ pub async fn fetch_all_new_transactions(
         // We only use the nearblocks api for the first sync. It has 150 calls / minute limit
         // So we sleep for 500ms to avoid hitting the limit. We don't expect to run
         // this more than once or twice after initialization
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(750)).await;
     }
 
     Ok((all_transactions, current_cursor))
