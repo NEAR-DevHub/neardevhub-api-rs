@@ -10,13 +10,13 @@ use rocket::{http::Status, State};
 pub async fn fetch_all_new_transactions(
     nearblocks_client: &nearblocks_client::ApiClient,
     after_block: Option<i64>,
-) -> (Vec<Transaction>, String) {
+) -> anyhow::Result<(Vec<Transaction>, String)> {
     let mut all_transactions = Vec::new();
     let mut current_cursor = "".to_string();
 
     dotenvy::dotenv().ok();
     let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
-    let contract: AccountId = env.contract.parse().unwrap();
+    let contract: AccountId = env.contract.parse().expect("Failed to parse contract");
 
     loop {
         let response = match nearblocks_client
@@ -55,20 +55,31 @@ pub async fn fetch_all_new_transactions(
 
         // Update cursor for next iteration
         current_cursor = response.cursor.unwrap();
+
+        // We only use the nearblocks api for the first sync. It has 150 calls / minute limit
+        // So we sleep for 500ms to avoid hitting the limit. We don't expect to run
+        // this more than once or twice after initialization
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     }
 
-    (all_transactions, current_cursor)
+    Ok((all_transactions, current_cursor))
 }
 
 pub async fn update_nearblocks_data(
     db: &State<DB>,
     rpc_service: &State<RpcService>,
     after_block: Option<i64>,
-) {
+) -> anyhow::Result<()> {
     let nearblocks_client = nearblocks_client::ApiClient::new();
 
     let (all_transactions, current_cursor) =
-        fetch_all_new_transactions(&nearblocks_client, after_block).await;
+        match fetch_all_new_transactions(&nearblocks_client, after_block).await {
+            Ok(result) => result,
+            Err(e) => {
+                eprintln!("Error fetching transactions: {:?}", e);
+                return Err(anyhow::anyhow!("Error fetching transactions: {:?}", e));
+            }
+        };
 
     println!("Total transactions fetched: {}", all_transactions.len());
 
@@ -76,7 +87,7 @@ pub async fn update_nearblocks_data(
         nearblocks_client::transactions::process(&all_transactions, db, rpc_service).await
     {
         eprintln!("Error processing transactions: {:?}", e);
-        return;
+        return Err(anyhow::anyhow!("Error processing transactions: {:?}", e));
     }
 
     if let Some(transaction) = all_transactions.last() {
@@ -89,6 +100,8 @@ pub async fn update_nearblocks_data(
             )
             .await;
     }
+
+    Ok(())
 }
 
 pub async fn process(
@@ -174,7 +187,9 @@ mod tests {
     #[tokio::test]
     async fn test_fetch_all_transactions() {
         let client = nearblocks_client::ApiClient::new();
-        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0)).await;
+        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0))
+            .await
+            .expect("Error fetching transactions");
 
         // Check total count
         assert!(

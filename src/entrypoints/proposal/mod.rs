@@ -182,10 +182,19 @@ async fn reset(db: &State<DB>) -> Result<(), Status> {
 
 #[utoipa::path(get, path = "/proposals/sync_from_start")]
 #[get("/sync_from_start")]
-async fn sync_from_start(db: &State<DB>, rpc_service: &State<RpcService>) -> Result<(), Status> {
-    update_nearblocks_data(db, rpc_service, Some(0)).await;
+async fn sync_from_start(
+    db: &State<DB>,
+    rpc_service: &State<RpcService>,
+) -> Result<String, Status> {
+    let result = update_nearblocks_data(db, rpc_service, Some(0)).await;
 
-    Ok(())
+    match result {
+        Ok(_) => Ok("Success".to_string()),
+        Err(e) => {
+            eprintln!("Error syncing from start: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
 }
 
 // TODO Remove this once we go in production or put it behind authentication or a flag

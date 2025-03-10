@@ -14,7 +14,6 @@ pub struct Env {
     pub database_url: String,
     pub nearblocks_api_key: String,
     pub fastnear_api_key: String,
-    // pub network: String,
 }
 
 #[derive(Deserialize, Clone)]
