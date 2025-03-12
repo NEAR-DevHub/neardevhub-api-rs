@@ -178,3 +178,49 @@ pub async fn process(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[tokio::test]
+    async fn test_fetch_all_transactions() {
+        let client = nearblocks_client::ApiClient::new();
+        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0))
+            .await
+            .expect("Error fetching transactions");
+
+        // Check total count
+        assert!(
+            transactions.len() >= 600,
+            "Expected at least 600 transactions, but got {}",
+            transactions.len()
+        );
+
+        assert!(
+            current_cursor == "None",
+            "Current cursor should be None but is >{}<",
+            current_cursor
+        );
+
+        // Check for duplicates
+        let mut seen_transactions = HashSet::new();
+        let mut duplicates = Vec::new();
+
+        for tx in &transactions {
+            if !seen_transactions.insert(&tx.id) {
+                duplicates.push(tx.id.clone());
+            }
+        }
+
+        assert!(
+            duplicates.is_empty(),
+            "Found {} duplicate transactions:\n{}",
+            duplicates.len(),
+            duplicates.join("\n")
+        );
+
+        println!("Total transactions found: {}", transactions.len());
+    }
+}
