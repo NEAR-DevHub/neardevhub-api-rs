@@ -82,10 +82,14 @@ impl RpcService {
                 .with_api_key(env.fastnear_api_key.parse().unwrap());
 
         // Use fastnear first before the archival RPC with super low rate limit
-        network.rpc_endpoints = vec![custom_endpoint, RPCEndpoint::mainnet()];
+        network.rpc_endpoints = vec![
+            custom_endpoint,
+            // RPCEndpoint::new("https://near.lava.build".parse().unwrap()),
+            RPCEndpoint::mainnet(),
+        ];
 
         Self {
-            network: NetworkConfig::mainnet(),
+            network,
             contract: Contract(contract),
         }
     }
