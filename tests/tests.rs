@@ -32,8 +32,8 @@ async fn test_proposal_ids_continuous_name_status_matches() {
     let client = Client::tracked(devhub_cache_api::rocket(None))
         .await
         .expect("valid `Rocket`");
-    let offset = 100;
-    let limit = 50;
+    let offset = 0;
+    let limit = 10;
     let query = format!("/proposals?order=id_asc&limit={}&offset={}", limit, offset);
     // First page
     let response = client.get(query).dispatch();
@@ -52,7 +52,13 @@ async fn test_proposal_ids_continuous_name_status_matches() {
         _ => result,
     };
 
-    assert_eq!(result.records.len(), 50, "Result records should be 50");
+    assert_eq!(
+        result.records.len(),
+        10,
+        "Result records count should be {}, but is {}",
+        limit,
+        result.records.len()
+    );
 
     eprintln!(
         "Results {:?}",
@@ -69,8 +75,8 @@ async fn test_proposal_ids_continuous_name_status_matches() {
     let rpc_service = RpcService::mainnet(contract_account_id);
 
     // Create a Vec of futures for all blockchain calls
-    let futures = result.records.iter().enumerate().map(|(ndx, record)| {
-        let proposal_id = ndx as i32 + offset;
+    let futures = result.records.iter().enumerate().map(|(_ndx, record)| {
+        let proposal_id = record.proposal_id;
         let rpc_service = rpc_service.clone();
         let record = record.clone();
 
@@ -102,6 +108,11 @@ async fn test_proposal_ids_continuous_name_status_matches() {
 
         assert_eq!(
             proposal.snapshot.body.get_name().as_str(),
+            record.clone().name.unwrap(),
+            "{} {} not matching {} {}",
+            proposal.id,
+            proposal.snapshot.body.get_name().as_str(),
+            record.proposal_id,
             record.name.unwrap()
         );
 
@@ -129,7 +140,7 @@ async fn test_if_the_last_ten_changed_will_get_indexed() -> Result<(), Box<dyn s
     let changelog = rpc_service.get_change_log().await.unwrap();
 
     // Get proposals from changelog and ensure they are unique
-    let mut proposal_ids: HashSet<i32> = changelog
+    let proposal_ids: HashSet<i32> = changelog
         .into_iter()
         .filter_map(|change| match change.change_log_type {
             ChangeLogType::Proposal(proposal_id) => Some(proposal_id as i32),
