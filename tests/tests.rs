@@ -61,9 +61,7 @@ async fn test_proposal_ids_continuous_name_status_matches() {
             .collect::<Vec<i32>>()
     );
 
-    let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
-    let contract_account_id: AccountId = env.contract.parse().unwrap();
-    let rpc_service = RpcService::mainnet(contract_account_id);
+    let rpc_service = RpcService::new();
 
     // Create a Vec of futures for all blockchain calls
     let futures = result.records.iter().enumerate().map(|(_ndx, record)| {
@@ -127,7 +125,7 @@ async fn test_if_the_last_ten_changed_will_get_indexed() -> Result<(), Box<dyn s
     let contract_account_id: AccountId = contract_string.parse().unwrap();
 
     // Get changelog from the RPC service
-    let rpc_service = RpcService::mainnet(contract_account_id);
+    let rpc_service = RpcService::new();
     let changelog = rpc_service.get_change_log().await.unwrap();
 
     // Get proposals from changelog and ensure they are unique
