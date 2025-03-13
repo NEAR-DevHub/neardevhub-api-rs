@@ -1,10 +1,12 @@
+use std::collections::HashSet;
+
 use devhub_shared::proposal::{Proposal, VersionedProposal};
 use futures::future::join_all;
 
 use devhub_cache_api::db::db_types::LastUpdatedInfo;
 use devhub_cache_api::entrypoints::proposal::proposal_types::ProposalBodyFields;
 use devhub_cache_api::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
-use devhub_cache_api::rpc_service::RpcService;
+use devhub_cache_api::rpc_service::{self, ChangeLogType, RpcService};
 use devhub_cache_api::{
     db::db_types::ProposalWithLatestSnapshotView, separate_number_and_text,
     timestamp_to_date_string, types::PaginatedResponse,
@@ -111,7 +113,7 @@ async fn test_proposal_ids_continuous_name_status_matches() {
 }
 
 #[rocket::async_test]
-async fn test_if_the_last_ten_will_get_indexed() {
+async fn test_if_the_last_ten_changed_will_get_indexed() -> Result<(), Box<dyn std::error::Error>> {
     use rocket::local::asynchronous::Client;
 
     let client = Client::tracked(devhub_cache_api::rocket(None))
@@ -122,13 +124,28 @@ async fn test_if_the_last_ten_will_get_indexed() {
         std::env::var("CONTRACT").unwrap_or_else(|_| "devhub.near".to_string());
     let contract_account_id: AccountId = contract_string.parse().unwrap();
 
-    // Get all proposal ids from the RPC service
+    // Get changelog from the RPC service
     let rpc_service = RpcService::mainnet(contract_account_id);
-    let proposal_ids = rpc_service.get_all_proposal_ids().await.unwrap();
-    let last_ten_ids: Vec<i32> = proposal_ids.iter().rev().take(10).cloned().collect();
+    let changelog = rpc_service.get_change_log().await.unwrap();
 
-    // Get the last 10 proposals
-    let versioned_proposals: Vec<VersionedProposal> = futures::stream::iter(last_ten_ids)
+    // Get proposals from changelog and ensure they are unique
+    let mut proposal_ids: HashSet<i32> = changelog
+        .into_iter()
+        .filter_map(|change| match change.change_log_type {
+            ChangeLogType::Proposal(proposal_id) => Some(proposal_id as i32),
+            _ => None,
+        })
+        .collect();
+
+    // Convert HashSet to Vec and sort proposal_ids in descending order
+    let mut proposal_ids: Vec<i32> = proposal_ids.into_iter().collect();
+    proposal_ids.sort_by(|a, b| b.cmp(a));
+
+    // Pick the last 10 proposal IDs
+    let proposal_ids: Vec<i32> = proposal_ids.into_iter().take(10).collect();
+
+    // Create a Vec of futures for all proposal calls
+    let versioned_proposals: Vec<VersionedProposal> = futures::stream::iter(proposal_ids)
         .then(|id| {
             let rpc_service = rpc_service.clone();
             async move { rpc_service.get_proposal(id).await.unwrap().data }
@@ -165,7 +182,6 @@ async fn test_if_the_last_ten_will_get_indexed() {
 
     eprintln!("after_block: {:?}", info.after_block);
 
-    // Get the last ten proposals from the API
     let limit = 10;
     let query = format!("/proposals?limit={}", limit);
     let result = client
@@ -199,6 +215,7 @@ async fn test_if_the_last_ten_will_get_indexed() {
             record.proposal_id, proposal.id, contract_string
         );
     }
+    Ok(())
 }
 
 #[rocket::async_test]
