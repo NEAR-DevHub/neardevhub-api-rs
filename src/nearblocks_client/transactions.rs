@@ -185,6 +185,7 @@ mod tests {
     use std::collections::HashSet;
 
     #[tokio::test]
+    #[ignore]
     async fn test_fetch_all_transactions() {
         let client = nearblocks_client::ApiClient::new();
         let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0))
