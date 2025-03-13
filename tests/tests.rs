@@ -43,15 +43,6 @@ async fn test_proposal_ids_continuous_name_status_matches() {
         .await
         .unwrap();
 
-    let env = std::env::var("ENV").unwrap_or_else(|_| "LOCAL".to_string());
-    let result = match env.as_str() {
-        "GH_ACTION" => {
-            let file = std::fs::File::open("test/result.json").expect("Unable to open file");
-            serde_json::from_reader(file).expect("Unable to parse JSON")
-        }
-        _ => result,
-    };
-
     assert_eq!(
         result.records.len(),
         10,
