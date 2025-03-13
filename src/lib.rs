@@ -24,7 +24,7 @@ pub fn separate_number_and_text(input: &str) -> (Option<i32>, String) {
     let mut current_number = String::new();
 
     for c in input.chars() {
-        if c.is_digit(10) && !(number.is_some() && current_number.is_empty()) {
+        if c.is_ascii_digit() && !(number.is_some() && current_number.is_empty()) {
             current_number.push(c);
         } else {
             if !current_number.is_empty() {
@@ -127,7 +127,7 @@ pub fn rocket(rpc_service: Option<RpcService>) -> rocket::Rocket<rocket::Build> 
     let contract: AccountId = env.contract.parse::<AccountId>().unwrap();
     let nearblocks_api_key = env.nearblocks_api_key;
 
-    let rpc_service = rpc_service.unwrap_or(RpcService::new());
+    let rpc_service = rpc_service.unwrap_or_default();
 
     rocket::custom(figment)
         .attach(cors)

@@ -92,7 +92,7 @@ impl RpcService {
 
     pub fn sandbox(network: NetworkConfig, contract: AccountId) -> Self {
         Self {
-            network: NetworkConfig::from(network),
+            network,
             contract: Contract(contract),
         }
     }
