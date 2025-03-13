@@ -37,17 +37,16 @@ impl DB {
         .fetch_optional(tx.as_mut())
         .await?;
 
-        // If the update did not find a matching row, insert the user
         if let Some(record) = rec {
             println!("Updated proposal: {:?}", record.id);
             Ok(record.id)
         } else {
-            // INSERT ON CONFLICT DO NOTHING
             let rec = sqlx::query!(
                 r#"
                 INSERT INTO proposals (id, author_id)
                 VALUES ($1, $2)
-                ON CONFLICT (id) DO NOTHING
+                ON CONFLICT (id) 
+                DO UPDATE SET author_id = EXCLUDED.author_id
                 RETURNING id
                 "#,
                 proposal_id as i32,
@@ -55,7 +54,8 @@ impl DB {
             )
             .fetch_one(tx.as_mut())
             .await?;
-            println!("Inserted proposal: {:?}", rec.id);
+
+            println!("Inserted or updated proposal: {:?}", rec.id);
             Ok(rec.id)
         }
     }
