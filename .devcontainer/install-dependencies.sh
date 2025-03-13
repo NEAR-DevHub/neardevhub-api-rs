@@ -12,7 +12,7 @@ sudo service postgresql start
 sudo su - postgres -c "
     psql -c \"CREATE DATABASE devhub_cache_api_rs\"
     psql -c \"CREATE ROLE devhub_cache_api_rs WITH LOGIN PASSWORD 'password';\"
-    psql -c \"ALTER ROLE devhub_cache_api_rs CREATEDB;\"
+    psql -c \"ALTER ROLE devhub_cache_api_rs SUPERUSER;\"
     psql -c \"GRANT ALL PRIVILEGES ON DATABASE devhub_cache_api_rs TO devhub_cache_api_rs;\"
 "
 
