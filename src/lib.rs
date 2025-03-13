@@ -24,7 +24,7 @@ pub fn separate_number_and_text(input: &str) -> (Option<i32>, String) {
     let mut current_number = String::new();
 
     for c in input.chars() {
-        if c.is_digit(10) {
+        if c.is_digit(10) && !(number.is_some() && current_number.is_empty()) {
             current_number.push(c);
         } else {
             if !current_number.is_empty() {
