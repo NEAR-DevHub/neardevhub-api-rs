@@ -67,6 +67,13 @@ impl RpcService {
         dotenvy::dotenv().ok();
 
         let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
+        Self::mainnet(env.contract.parse::<AccountId>().unwrap())
+    }
+
+    pub fn mainnet(contract: AccountId) -> Self {
+        dotenvy::dotenv().ok();
+
+        let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
 
         let mut network = NetworkConfig::mainnet();
 
@@ -77,13 +84,6 @@ impl RpcService {
         // Use fastnear first before the archival RPC with super low rate limit
         network.rpc_endpoints = vec![custom_endpoint, RPCEndpoint::mainnet()];
 
-        Self {
-            network,
-            contract: Contract(env.contract.parse::<AccountId>().unwrap()),
-        }
-    }
-
-    pub fn mainnet(contract: AccountId) -> Self {
         Self {
             network: NetworkConfig::mainnet(),
             contract: Contract(contract),
