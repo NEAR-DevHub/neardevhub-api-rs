@@ -37,17 +37,16 @@ impl DB {
         .fetch_optional(tx.as_mut())
         .await?;
 
-        // If the update did not find a matching row, insert the user
         if let Some(record) = rec {
             println!("Updated proposal: {:?}", record.id);
             Ok(record.id)
         } else {
-            // INSERT ON CONFLICT DO NOTHING
             let rec = sqlx::query!(
                 r#"
                 INSERT INTO proposals (id, author_id)
                 VALUES ($1, $2)
-                ON CONFLICT (id) DO NOTHING
+                ON CONFLICT (id) 
+                DO UPDATE SET author_id = EXCLUDED.author_id
                 RETURNING id
                 "#,
                 proposal_id as i32,
@@ -55,7 +54,8 @@ impl DB {
             )
             .fetch_one(tx.as_mut())
             .await?;
-            println!("Inserted proposal: {:?}", rec.id);
+
+            println!("Inserted or updated proposal: {:?}", rec.id);
             Ok(rec.id)
         }
     }
@@ -124,6 +124,29 @@ impl DB {
         .execute(&self.0)
         .await?;
         Ok(())
+    }
+
+    pub async fn set_last_updated_block_on_tx(
+        tx: &mut Transaction<'static, Postgres>,
+        after_block: BlockHeight,
+    ) -> anyhow::Result<()> {
+        println!("Storing block: {}", after_block);
+        let result = sqlx::query!(
+            r#"
+          UPDATE last_updated_info SET after_block = $1
+          "#,
+            after_block
+        )
+        .execute(tx.as_mut())
+        .await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!("Failed to set last updated block on tx: {:?}", e);
+                Err(anyhow::anyhow!("Failed to set last updated block on tx"))
+            }
+        }
     }
 
     pub async fn set_last_updated_cursor(&self, cursor: String) -> Result<(), Error> {
@@ -675,7 +698,7 @@ impl DB {
     pub async fn get_rfp_with_all_snapshots(
         &self,
         id: i64,
-    ) -> anyhow::Result<(Vec<RfpSnapshotRecord>, i64)> {
+    ) -> anyhow::Result<Vec<RfpSnapshotRecord>> {
         // Group by ts
         // Build the SQL query for fetching data with the validated order clause
         let data_sql = r#"
@@ -695,20 +718,8 @@ impl DB {
             .fetch_all(&self.0)
             .await;
 
-        let count_sql = r#"
-            SELECT COUNT(*)
-            FROM rfp_snapshots
-            WHERE rfp_id = $1
-        "#;
-
-        // Build the SQL query for counting total records
-        let total_count = sqlx::query_scalar(count_sql)
-            .bind(id)
-            .fetch_one(&self.0)
-            .await?;
-
         match result {
-            Ok(recs) => Ok((recs, total_count)),
+            Ok(recs) => Ok(recs),
             Err(e) => {
                 eprintln!("Failed to get rfp with all snapshots: {:?}", e);
                 Err(anyhow::anyhow!("Failed to get rfp with all snapshots"))

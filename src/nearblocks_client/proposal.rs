@@ -6,13 +6,12 @@ use crate::entrypoints::proposal::proposal_types::{
 use crate::nearblocks_client::types::{Transaction, BLOCK_HEIGHT_OFFSET};
 use crate::rpc_service::RpcService;
 use devhub_shared::proposal::VersionedProposal;
-use near_account_id::AccountId;
 use rocket::{http::Status, State};
 
 pub async fn handle_set_block_height_callback(
     transaction: Transaction,
     db: &State<DB>,
-    contract: &AccountId,
+    rpc_service: &State<RpcService>,
 ) -> Result<(), Status> {
     let action = transaction
         .actions
@@ -40,7 +39,6 @@ pub async fn handle_set_block_height_callback(
         Status::InternalServerError
     })?;
 
-    let rpc_service = RpcService::new(contract);
     let id = args.clone().proposal.id.try_into().unwrap();
 
     let versioned_proposal_fallback: VersionedProposal = args.clone().proposal.into();
@@ -82,9 +80,8 @@ pub async fn handle_set_block_height_callback(
 pub async fn handle_edit_proposal(
     transaction: Transaction,
     db: &State<DB>,
-    contract: &AccountId,
+    rpc_service: &State<RpcService>,
 ) -> Result<(), rocket::http::Status> {
-    let rpc_service = RpcService::new(contract);
     let id = get_proposal_id(&transaction).map_err(|e| {
         eprintln!("Failed to get proposal ID: {}", e);
         Status::InternalServerError

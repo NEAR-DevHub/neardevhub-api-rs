@@ -1,5 +1,5 @@
-use devhub_shared::proposal::VersionedProposal;
-use devhub_shared::rfp::VersionedRFP;
+use devhub_shared::proposal::{ProposalId, VersionedProposal};
+use devhub_shared::rfp::{RFPId, VersionedRFP};
 use near_account_id::AccountId;
 use near_api::{types::reference::Reference, types::Data};
 use near_api::{Contract, NetworkConfig, RPCEndpoint};
@@ -8,6 +8,27 @@ use rocket::http::Status;
 use rocket::serde::json::json;
 use serde::Deserialize;
 
+#[derive(Debug, serde::Deserialize)]
+pub struct Env {
+    pub contract: String,
+    pub database_url: String,
+    pub nearblocks_api_key: String,
+    pub fastnear_api_key: String,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct ChangeLog {
+    pub block_id: u64,
+    pub block_timestamp: u64,
+    pub change_log_type: ChangeLogType,
+}
+
+#[derive(Deserialize, Clone)]
+pub enum ChangeLogType {
+    Proposal(ProposalId),
+    RFP(RFPId),
+}
+
 #[derive(Deserialize)]
 pub struct RpcResponse {
     pub data: String,
@@ -15,8 +36,8 @@ pub struct RpcResponse {
 
 #[derive(Clone)]
 pub struct RpcService {
-    network: NetworkConfig,
-    contract: Contract,
+    pub network: NetworkConfig,
+    pub contract: Contract,
 }
 
 #[derive(Deserialize)]
@@ -32,11 +53,6 @@ struct QueryResponseResult {
     result: Vec<i32>,
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct Env {
-    fastnear_api_key: String,
-}
-
 impl Default for RpcService {
     fn default() -> Self {
         Self {
@@ -47,7 +63,14 @@ impl Default for RpcService {
 }
 
 impl RpcService {
-    pub fn new(id: &AccountId) -> Self {
+    pub fn new() -> Self {
+        dotenvy::dotenv().ok();
+
+        let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
+        Self::mainnet(env.contract.parse::<AccountId>().unwrap())
+    }
+
+    pub fn mainnet(contract: AccountId) -> Self {
         dotenvy::dotenv().ok();
 
         let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
@@ -59,11 +82,22 @@ impl RpcService {
                 .with_api_key(env.fastnear_api_key.parse().unwrap());
 
         // Use fastnear first before the archival RPC with super low rate limit
-        network.rpc_endpoints = vec![custom_endpoint, RPCEndpoint::mainnet()];
+        network.rpc_endpoints = vec![
+            custom_endpoint,
+            // RPCEndpoint::new("https://near.lava.build".parse().unwrap()),
+            RPCEndpoint::mainnet(),
+        ];
 
         Self {
             network,
-            contract: Contract(id.clone()),
+            contract: Contract(contract),
+        }
+    }
+
+    pub fn sandbox(network: NetworkConfig, contract: AccountId) -> Self {
+        Self {
+            network,
+            contract: Contract(contract),
         }
     }
 
@@ -165,6 +199,44 @@ impl RpcService {
             Err(e) => {
                 eprintln!("Failed to get rfp on block: {:?}", e);
                 Err(Status::InternalServerError)
+            }
+        }
+    }
+
+    pub async fn get_change_log(&self) -> Result<Vec<ChangeLog>, Status> {
+        let result: Result<Data<Vec<ChangeLog>>, _> = self
+            .contract
+            .call_function("get_change_log", json!({}))
+            .unwrap()
+            .read_only()
+            .fetch_from(&self.network)
+            .await;
+
+        match result {
+            Ok(res) => Ok(res.data),
+            Err(e) => {
+                eprintln!("Failed to get change log: {:?}", e);
+                Err(Status::InternalServerError)
+            }
+        }
+    }
+
+    pub async fn get_change_log_since(&self, block_id: i64) -> anyhow::Result<Vec<ChangeLog>> {
+        match self
+            .contract
+            .call_function("get_change_log_since", json!({"since": block_id}))
+            .unwrap()
+            .read_only()
+            .fetch_from(&self.network)
+            .await
+        {
+            Ok(res) => Ok(res.data),
+            Err(e) => {
+                eprintln!(
+                    "Failed to get change log since: {:?} error: {:?}",
+                    block_id, e
+                );
+                Err(anyhow::anyhow!("Failed to get change log since: {:?}", e))
             }
         }
     }
