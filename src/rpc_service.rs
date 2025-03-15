@@ -48,10 +48,12 @@ impl RpcService {
 
         let custom_endpoint =
             RPCEndpoint::new("https://rpc.mainnet.fastnear.com/".parse().unwrap())
-                .with_api_key(env.fastnear_api_key.parse().unwrap());
+                .with_api_key(env.fastnear_api_key.parse().unwrap())
+                .with_retries(3)
+                .with_exponential_backoff(true, 2);
 
         // Use fastnear first before the archival RPC with super low rate limit
-        network.rpc_endpoints = vec![custom_endpoint, RPCEndpoint::mainnet()];
+        network.rpc_endpoints = vec![custom_endpoint, RPCEndpoint::mainnet().with_retries(3)];
 
         Self {
             network,
@@ -306,6 +308,10 @@ impl RpcService {
         &self,
         block_id: i64,
     ) -> Result<Data<i64>, near_api::errors::QueryError<RpcQueryRequest>> {
+        println!("Attempting to get last proposal ID at block {}", block_id);
+        println!("Using contract: {}", self.contract.0);
+        println!("RPC endpoints configured: {:?}", self.network.rpc_endpoints);
+
         let result: Result<Data<i64>, _> = self
             .contract
             .call_function("get_last_proposal_id", json!({}))
@@ -315,6 +321,19 @@ impl RpcService {
             .fetch_from(&self.network)
             .await;
 
-        result
+        match &result {
+            Ok(data) => {
+                println!("Successfully retrieved last proposal ID: {}", data.data);
+                result
+            }
+            Err(e) => {
+                eprintln!(
+                    "Failed to get last proposal ID at block {}: {:?}",
+                    block_id, e
+                );
+                eprintln!("Error details: {:#?}", e);
+                result
+            }
+        }
     }
 }
