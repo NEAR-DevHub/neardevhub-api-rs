@@ -41,6 +41,7 @@ pub struct Env {
     pub contract: String,
     pub nearblocks_api_key: String,
     pub fastnear_api_key: String,
+    pub database_url: String,
 }
 
 impl Default for RpcService {

@@ -1,17 +1,19 @@
-use near_sdk::AccountId;
-
-use crate::{
+// use super::*;
+use devhub_cache_api::{
     db::db_types::SputnikProposalSnapshotRecord,
     entrypoints::sputnik::sputnik_types::{Proposal, ProposalOutput},
     rpc_service::RpcService,
     types::PaginatedResponse,
 };
+// use anyhow::Result;
+use near_sdk::AccountId;
 
 #[rocket::async_test]
 async fn test_get_dao_proposals() {
     use rocket::local::asynchronous::Client;
-
-    let client = Client::tracked(super::rocket())
+    // let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
+    let rpc_service = RpcService::new();
+    let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
 
@@ -30,8 +32,9 @@ async fn test_get_dao_proposals() {
 #[rocket::async_test]
 async fn test_get_dao_proposals_limit_and_offset() {
     use rocket::local::asynchronous::Client;
-
-    let client = Client::tracked(super::rocket())
+    // let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
+    let rpc_service = RpcService::new();
+    let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
 
@@ -60,8 +63,9 @@ async fn test_get_dao_proposals_limit_and_offset() {
 #[rocket::async_test]
 async fn test_get_dao_proposals_order() {
     use rocket::local::asynchronous::Client;
-
-    let client = Client::tracked(super::rocket())
+    // let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
+    let rpc_service = RpcService::new();
+    let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
 
@@ -104,8 +108,9 @@ async fn test_get_dao_proposals_order() {
 #[rocket::async_test]
 async fn test_get_dao_proposals_filters() {
     use rocket::local::asynchronous::Client;
-
-    let client = Client::tracked(super::rocket())
+    // let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
+    let rpc_service = RpcService::new();
+    let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
 
@@ -242,7 +247,9 @@ async fn test_removed_proposals_have_correct_status() {
     // The following proposal IDs (28, 72, 79) on testing-astradao.sputnik-dao.near
     // were initially created but later voted to be removed. We verify that these proposals
     // are still indexed in the API but their status is correctly set to "Removed"
-    let client = Client::tracked(super::rocket())
+    // let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
+    let rpc_service = RpcService::new();
+    let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
 
@@ -274,8 +281,9 @@ async fn test_removed_proposals_have_correct_status() {
 async fn test_search_proposals_on_description_or_hash() {
     use rocket::local::asynchronous::Client;
     use urlencoding;
-
-    let client = Client::tracked(super::rocket())
+    // let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
+    let rpc_service = RpcService::new();
+    let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
 
@@ -323,8 +331,9 @@ async fn test_search_proposals_on_description_or_hash() {
 async fn test_if_the_last_ten_will_get_indexed() {
     use futures::StreamExt;
     use rocket::local::asynchronous::Client;
-
-    let client = Client::tracked(super::rocket())
+    // let rpc_service = RpcService::sandbox(worker.into(), contract_account.id().clone());
+    let rpc_service = RpcService::new();
+    let client = Client::tracked(devhub_cache_api::rocket(Some(rpc_service)))
         .await
         .expect("valid `Rocket`");
 
@@ -333,7 +342,7 @@ async fn test_if_the_last_ten_will_get_indexed() {
     let contract_account_id: AccountId = contract_string.parse().unwrap();
     println!("contract_account_id: {:?}", contract_account_id);
     // Get all proposal ids from the RPC service
-    let rpc_service = RpcService::new(&contract_account_id);
+    let rpc_service = RpcService::mainnet(contract_account_id);
     let last_proposal_id = match rpc_service.get_last_proposal_id().await {
         Ok(response) => response.data,
         Err(e) => {

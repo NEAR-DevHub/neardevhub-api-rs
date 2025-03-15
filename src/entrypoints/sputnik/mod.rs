@@ -1,6 +1,7 @@
 use crate::db::db_types::{LastUpdatedInfo, SputnikProposalSnapshotRecord};
 use crate::db::DB;
-use crate::nearblocks_client::transactions::update_dao_via_nearblocks;
+use crate::nearblocks_client::transactions::update_dao_nearblocks_data;
+use crate::rpc_service::RpcService;
 use crate::types::PaginatedResponse;
 use near_account_id::AccountId;
 use rocket::http::Status;
@@ -62,10 +63,11 @@ async fn search(
 
     match result {
         Ok((proposals, total)) => Some(Json(PaginatedResponse::new(
-            proposals.into_iter().map(Into::into).collect(),
+            proposals.into_iter().collect(),
             1,
             10,
             total.try_into().unwrap(),
+            None, // TODO add newly indexed
         ))),
         Err(e) => {
             eprintln!("Error fetching proposals: {:?}", e);
@@ -89,7 +91,7 @@ async fn get_dao_proposals(
     offset: Option<i64>,
     filters: Option<GetDaoProposalsFilters>,
     db: &State<DB>,
-    nearblocks_api_key: &State<String>,
+    rpc_service: &State<RpcService>,
 ) -> Option<Json<PaginatedResponse<SputnikProposalSnapshotRecord>>> {
     let order = order.unwrap_or("id_desc");
     let limit = limit.unwrap_or(10);
@@ -108,10 +110,10 @@ async fn get_dao_proposals(
         .await
         .unwrap();
 
-    if let Err(e) = update_dao_via_nearblocks(
+    if let Err(e) = update_dao_nearblocks_data(
         db.inner(),
         &contract,
-        nearblocks_api_key.inner(),
+        rpc_service.inner(),
         Some(last_updated_info.after_block),
     )
     .await
@@ -129,6 +131,7 @@ async fn get_dao_proposals(
         1,
         limit.try_into().unwrap(),
         total.try_into().unwrap(),
+        None, // TODO add newly indexed
     )))
 }
 
@@ -165,7 +168,7 @@ async fn reset_dao_proposals(account_id: &str, db: &State<DB>) -> Result<(), Sta
 async fn reset_and_test(
     account_id: &str,
     db: &State<DB>,
-    nearblocks_api_key: &State<String>,
+    rpc_service: &State<RpcService>,
 ) -> Json<PaginatedResponse<SputnikProposalSnapshotRecord>> {
     let contract = match AccountId::from_str(account_id) {
         Ok(contract) => contract,
@@ -177,8 +180,7 @@ async fn reset_and_test(
 
     db.remove_all_dao_proposals(account_id).await.unwrap();
 
-    let _ =
-        update_dao_via_nearblocks(db.inner(), &contract, nearblocks_api_key.inner(), Some(0)).await;
+    let _ = update_dao_nearblocks_data(db.inner(), &contract, rpc_service.inner(), Some(0)).await;
 
     let (proposals, total) = fetch_dao_proposals(db, account_id, 10, "id_desc", 0, None).await;
 
@@ -187,7 +189,34 @@ async fn reset_and_test(
         1,
         10,
         total.try_into().unwrap(),
+        None, // TODO add newly indexed
     ))
+}
+
+#[utoipa::path(get, path = "/proposals/sync_from_start/<account_id>")]
+#[get("/proposals/sync_from_start/<account_id>")]
+async fn sync_from_start(
+    account_id: &str,
+    db: &State<DB>,
+    rpc_service: &State<RpcService>,
+) -> Result<String, Status> {
+    let contract = match AccountId::from_str(account_id) {
+        Ok(contract) => contract,
+        Err(_) => {
+            eprintln!("Invalid account id: {}", account_id);
+            return Err(Status::BadRequest);
+        }
+    };
+
+    let result = update_dao_nearblocks_data(db, &contract, rpc_service, Some(0)).await;
+
+    match result {
+        Ok(_) => Ok("Success".to_string()),
+        Err(e) => {
+            eprintln!("Error syncing from start: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
 }
 
 pub fn stage() -> rocket::fairing::AdHoc {
@@ -202,7 +231,8 @@ pub fn stage() -> rocket::fairing::AdHoc {
                 get_dao_proposals,
                 reset_dao_proposals,
                 reset_and_test,
-                search
+                search,
+                sync_from_start,
             ],
         )
     })

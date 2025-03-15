@@ -11,13 +11,19 @@ use rocket::{http::Status, State};
 pub async fn fetch_all_new_transactions(
     nearblocks_client: &nearblocks_client::ApiClient,
     after_block: Option<i64>,
+    passed_contract: Option<AccountId>,
 ) -> anyhow::Result<(Vec<Transaction>, String)> {
     let mut all_transactions = Vec::new();
     let mut current_cursor = "".to_string();
 
     dotenvy::dotenv().ok();
     let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
-    let contract: AccountId = env.contract.parse().expect("Failed to parse contract");
+    let env_contract: AccountId = env.contract.parse().expect("Failed to parse contract");
+
+    let contract = match passed_contract {
+        Some(c) => c,
+        None => env_contract,
+    };
 
     loop {
         let response = match nearblocks_client
@@ -73,7 +79,7 @@ pub async fn update_nearblocks_data(
     let nearblocks_client = nearblocks_client::ApiClient::new();
 
     let (all_transactions, current_cursor) =
-        match fetch_all_new_transactions(&nearblocks_client, after_block).await {
+        match fetch_all_new_transactions(&nearblocks_client, after_block, None).await {
             Ok(result) => result,
             Err(e) => {
                 eprintln!("Error fetching transactions: {:?}", e);
@@ -104,9 +110,10 @@ pub async fn update_nearblocks_data(
     Ok(())
 }
 
-pub async fn update_dao_via_nearblocks(
+pub async fn update_dao_nearblocks_data(
     db: &DB,
     contract: &AccountId,
+    rpc_service: &RpcService,
     after_block: Option<i64>,
 ) -> anyhow::Result<()> {
     let nearblocks_client = nearblocks_client::ApiClient::new();
@@ -116,7 +123,9 @@ pub async fn update_dao_via_nearblocks(
         after_block.unwrap_or(0)
     );
     let (all_transactions, _) =
-        match fetch_all_new_transactions(&nearblocks_client, after_block).await {
+        match fetch_all_new_transactions(&nearblocks_client, after_block, Some(contract.clone()))
+            .await
+        {
             Ok(result) => result,
             Err(e) => {
                 eprintln!("Error fetching transactions: {:?}", e);
@@ -128,7 +137,7 @@ pub async fn update_dao_via_nearblocks(
 
     // Process transactions and get the last successful block height
     let last_successful_block =
-        process_dao_transactions(&all_transactions, db.into(), contract).await?;
+        process_dao_transactions(&all_transactions, db.into(), contract, rpc_service).await?;
 
     // Only update the after_block if all transactions were processed successfully
     println!(
@@ -143,6 +152,7 @@ pub async fn process_dao_transactions(
     transactions: &[Transaction],
     db: &State<DB>,
     contract: &AccountId,
+    rpc_service: &RpcService,
 ) -> anyhow::Result<i64> {
     // Return the last successful block height
     let mut last_successful_block = None;
@@ -166,13 +176,15 @@ pub async fn process_dao_transactions(
                 "add_proposal" => {
                     println!("add_proposal");
                     let block_height =
-                        handle_add_proposal(transaction.to_owned(), db, contract).await?;
+                        handle_add_proposal(transaction.to_owned(), db, contract, rpc_service)
+                            .await?;
                     last_successful_block = Some(block_height);
                 }
                 "act_proposal" => {
                     println!("act_proposal");
                     let block_height =
-                        handle_act_proposal(transaction.to_owned(), db, contract).await?;
+                        handle_act_proposal(transaction.to_owned(), db, contract, rpc_service)
+                            .await?;
                     last_successful_block = Some(block_height);
                 }
                 _ => {
@@ -275,7 +287,7 @@ mod tests {
     #[ignore]
     async fn test_fetch_all_transactions() {
         let client = nearblocks_client::ApiClient::new();
-        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0))
+        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0), None)
             .await
             .expect("Error fetching transactions");
 
