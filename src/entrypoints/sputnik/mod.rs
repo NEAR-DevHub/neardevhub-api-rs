@@ -117,7 +117,8 @@ async fn get_dao_proposals(
     .await
     {
         eprintln!("Failed to update DAO via nearblocks: {e}");
-        return None;
+        // https://testing-indexer.fly.dev/
+        // return None;
     }
 
     let (proposals, total) =
