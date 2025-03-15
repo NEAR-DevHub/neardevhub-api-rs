@@ -1,13 +1,13 @@
 use near_sdk::AccountId;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+pub mod types;
+use types::Transaction;
 pub mod proposal;
 pub mod rfp;
 pub mod sputnik;
 pub mod transactions;
-pub mod types;
-use types::Transaction;
-
+use crate::rpc_service::Env;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ApiResponse {
     #[serde(default)]
@@ -24,20 +24,19 @@ pub struct ApiClient {
 
 impl Default for ApiClient {
     fn default() -> Self {
-        Self {
-            base_url: "https://api.nearblocks.io/".to_string(),
-            client: Client::new(),
-            api_key: "".to_string(),
-        }
+        Self::new()
     }
 }
 
 impl ApiClient {
-    pub fn new(api_key: String) -> Self {
+    pub fn new() -> Self {
+        dotenvy::dotenv().ok();
+        let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
+
         Self {
             base_url: "https://api.nearblocks.io/".to_string(),
             client: Client::new(),
-            api_key,
+            api_key: env.nearblocks_api_key,
         }
     }
 
@@ -49,7 +48,7 @@ impl ApiClient {
         order: Option<String>,
         page: Option<i32>,
         after_block: Option<i64>,
-    ) -> Result<ApiResponse, reqwest::Error> {
+    ) -> anyhow::Result<ApiResponse> {
         let base_params = self.build_pagination_params(limit, order, page);
         let query_params = self.add_cursor_param(base_params, cursor, after_block);
         let endpoint = format!("v1/account/{}/txns", account_id);
@@ -64,7 +63,19 @@ impl ApiClient {
             .send()
             .await?;
 
-        match response.json::<ApiResponse>().await {
+        // Add debug information about the response
+        println!("Response status: {}", response.status());
+
+        if !response.status().is_success() {
+            let error_text = response.text().await?;
+            eprintln!("API error response: {}", error_text);
+            return Err(anyhow::anyhow!("API error response: {}", error_text));
+        }
+
+        let response_text = response.text().await?;
+        println!("Response body: {}", response_text);
+
+        match serde_json::from_str::<ApiResponse>(&response_text) {
             Ok(api_response) => {
                 println!(
                     "Successfully fetched {} transactions",
@@ -74,7 +85,8 @@ impl ApiClient {
             }
             Err(e) => {
                 eprintln!("Failed to parse API response: {}", e);
-                Err(e)
+                eprintln!("Raw response: {}", response_text);
+                Err(anyhow::anyhow!("Failed to parse API response: {}", e))
             }
         }
     }

@@ -87,7 +87,7 @@ pub async fn handle_add_proposal(
     db: &State<DB>,
     contract: &AccountId,
 ) -> anyhow::Result<i64> {
-    let rpc_service = RpcService::new(contract);
+    let rpc_service = RpcService::mainnet(contract.clone());
     /*
       get_last_proposal_id actually returns the number of proposals starting from 0.
       https://github.com/near-daos/sputnik-dao-contract/blob/3d568f9517a8c7a6510786d978bb25b180501841/sputnikdao2/src/proposals.rs#L532
@@ -251,7 +251,7 @@ pub async fn handle_act_proposal(
             anyhow::anyhow!("Failed to parse ActProposalArgs")
         })?;
 
-    let rpc_service = RpcService::new(contract);
+    let rpc_service = RpcService::mainnet(contract.clone());
     let proposal_id = args.id;
     let block_id = transaction.receipt_block.block_height;
 

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO proposals (id, author_id)\n                VALUES ($1, $2)\n                ON CONFLICT (id) \n                DO UPDATE SET author_id = EXCLUDED.author_id\n                RETURNING id\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7123ec6712a4ab86e61bbeda7813758fe918813c9026c30bb3ba3b9faccd9151"
+}

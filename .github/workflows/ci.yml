@@ -25,9 +25,10 @@ jobs:
           sudo service postgresql start
           sudo su - postgres -c "
             psql -c \"CREATE DATABASE devhub_cache_api_rs\"
-            psql -c \"CREATE ROLE devhub_cache_api_rs WITH LOGIN PASSWORD 'password';\"
-            psql -c \"ALTER ROLE devhub_cache_api_rs CREATEDB;\"
-            psql -c \"GRANT ALL PRIVILEGES ON DATABASE devhub_cache_api_rs TO devhub_cache_api_rs;\"
+            psql -c \"CREATE ROLE devhub_cache_api_rs WITH LOGIN SUPERUSER PASSWORD 'password';\"
+            psql -c \"ALTER ROLE devhub_cache_api_rs SUPERUSER;\"
+            psql -d devhub_cache_api_rs -c \"GRANT ALL PRIVILEGES ON DATABASE devhub_cache_api_rs TO devhub_cache_api_rs;\"
+            psql -d devhub_cache_api_rs -c \"GRANT ALL ON SCHEMA public TO devhub_cache_api_rs;\"
           "
 
       - name: Install SQlx and cargo audit
@@ -49,6 +50,7 @@ jobs:
           CONTRACT: devhub.near
           DATABASE_URL: postgres://devhub_cache_api_rs:password@127.0.0.1:5432/devhub_cache_api_rs
           NEARBLOCKS_API_KEY: ${{ secrets.NEARBLOCKS_API_KEY }}
+          FASTNEAR_API_KEY: ${{ secrets.FASTNEAR_API_KEY }}
           ENV: GH_ACTION
 
       - name: Run clippy and audit

@@ -1,4 +1,5 @@
 use self::proposal_types::*;
+use crate::changelog::fetch_changelog_from_rpc;
 use crate::db::db_types::{
     LastUpdatedInfo, ProposalSnapshotRecord, ProposalWithLatestSnapshotView,
 };
@@ -8,7 +9,6 @@ use crate::rpc_service::RpcService;
 use crate::separate_number_and_text;
 use crate::types::PaginatedResponse;
 use devhub_shared::proposal::VersionedProposal;
-use near_account_id::AccountId;
 use rocket::delete;
 use rocket::serde::json::Json;
 use rocket::{get, http::Status, State};
@@ -20,11 +20,11 @@ pub mod proposal_types;
 ))]
 #[get("/search/<input>")]
 async fn search(
-    input: String,
+    input: &str,
     db: &State<DB>,
 ) -> Option<Json<PaginatedResponse<ProposalWithLatestSnapshotView>>> {
     let limit = 10;
-    let (number, _) = separate_number_and_text(&input);
+    let (number, _) = separate_number_and_text(input);
 
     let result = if let Some(number) = number {
         match db.get_proposal_with_latest_snapshot_by_id(number).await {
@@ -39,10 +39,11 @@ async fn search(
 
     match result {
         Ok((proposals, total)) => Some(Json(PaginatedResponse::new(
-            proposals.clone().into_iter().map(Into::into).collect(),
+            proposals.clone().into_iter().collect(),
             1,
             limit.try_into().unwrap(),
             total.try_into().unwrap(),
+            None,
         ))),
         Err(e) => {
             eprintln!("Error fetching proposals: {:?}", e);
@@ -83,35 +84,29 @@ async fn get_proposals(
     offset: Option<i64>,
     filters: Option<GetProposalFilters>,
     db: &State<DB>,
-    contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
+    rpc_service: &State<RpcService>,
 ) -> Option<Json<PaginatedResponse<ProposalWithLatestSnapshotView>>> {
     let order = order.unwrap_or("id_desc");
     let limit = limit.unwrap_or(10);
     let offset = offset.unwrap_or(0);
 
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
-    {
-        update_nearblocks_data(
-            db.inner(),
-            contract.inner(),
-            nearblocks_api_key.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    let change_log_count = fetch_changelog_from_rpc(
+        db.inner(),
+        rpc_service.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     let (proposals, total) = fetch_proposals(db.inner(), limit, order, offset, filters).await;
 
     Some(Json(PaginatedResponse::new(
-        proposals.into_iter().map(Into::into).collect(),
+        proposals.into_iter().collect(),
         1,
         limit.try_into().unwrap(),
         total.try_into().unwrap(),
+        Some(change_log_count.unwrap_or(0)),
     )))
 }
 
@@ -120,31 +115,24 @@ async fn get_proposals(
 async fn get_proposal_with_all_snapshots(
     proposal_id: i32,
     db: &State<DB>,
-    contract: &State<AccountId>,
-    nearblocks_api_key: &State<String>,
-) -> Result<Json<Vec<ProposalSnapshotRecord>>, Status> {
-    let current_timestamp_nano = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+    rpc_service: &State<RpcService>,
+) -> Option<Json<Vec<ProposalSnapshotRecord>>> {
     let last_updated_info = db.get_last_updated_info().await.unwrap();
 
-    if current_timestamp_nano - last_updated_info.after_date
-        >= chrono::Duration::seconds(1).num_nanoseconds().unwrap()
-    {
-        update_nearblocks_data(
-            db.inner(),
-            contract.inner(),
-            nearblocks_api_key.inner(),
-            Some(last_updated_info.after_block),
-        )
-        .await;
-    }
+    let _ = fetch_changelog_from_rpc(
+        db.inner(),
+        rpc_service.inner(),
+        Some(last_updated_info.after_block),
+    )
+    .await;
 
     match db.get_proposal_with_all_snapshots(proposal_id).await {
         Err(e) => {
             eprintln!("Failed to get proposal snapshots: {:?}", e);
             // Ok(Json(vec![]))
-            Err(Status::InternalServerError)
+            None
         }
-        Ok(result) => Ok(Json(result)),
+        Ok(result) => Some(Json(result)),
     }
 }
 
@@ -192,6 +180,23 @@ async fn reset(db: &State<DB>) -> Result<(), Status> {
     }
 }
 
+#[utoipa::path(get, path = "/proposals/sync_from_start")]
+#[get("/sync_from_start")]
+async fn sync_from_start(
+    db: &State<DB>,
+    rpc_service: &State<RpcService>,
+) -> Result<String, Status> {
+    let result = update_nearblocks_data(db, rpc_service, Some(0)).await;
+
+    match result {
+        Ok(_) => Ok("Success".to_string()),
+        Err(e) => {
+            eprintln!("Error syncing from start: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
+}
+
 // TODO Remove this once we go in production or put it behind authentication or a flag
 #[get("/info/clean")]
 async fn clean(db: &State<DB>) -> Result<(), Status> {
@@ -222,9 +227,8 @@ async fn get_timestamp(db: &State<DB>) -> Result<Json<LastUpdatedInfo>, Status> 
 #[get("/<proposal_id>")]
 async fn get_proposal(
     proposal_id: i32,
-    contract: &State<AccountId>,
+    rpc_service: &State<RpcService>,
 ) -> Result<Json<VersionedProposal>, rocket::http::Status> {
-    let rpc_service = RpcService::new(contract);
     // We should also add rate limiting to this endpoint
     match rpc_service.get_proposal(proposal_id).await {
         Ok(proposal) => Ok(Json(proposal.data)),
@@ -264,6 +268,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
                     reset,
                     set_cursor,
                     set_block,
+                    sync_from_start,
                 ],
             )
             .mount(

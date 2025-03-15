@@ -1,5 +1,7 @@
 use crate::entrypoints::sputnik::sputnik_types::ProposalOutput;
+use devhub_shared::proposal::ProposalId;
 use devhub_shared::proposal::VersionedProposal;
+use devhub_shared::rfp::RFPId;
 use devhub_shared::rfp::VersionedRFP;
 use near_account_id::AccountId;
 use near_api::{types::reference::Reference, types::Data};
@@ -10,6 +12,19 @@ use rocket::serde::json::json;
 use serde::Deserialize;
 use serde_json::Value;
 
+#[derive(Deserialize, Clone)]
+pub struct ChangeLog {
+    pub block_id: u64,
+    pub block_timestamp: u64,
+    pub change_log_type: ChangeLogType,
+}
+
+#[derive(Deserialize, Clone)]
+pub enum ChangeLogType {
+    Proposal(ProposalId),
+    RFP(RFPId),
+}
+
 #[derive(Deserialize)]
 pub struct RpcResponse {
     pub data: String,
@@ -17,13 +32,15 @@ pub struct RpcResponse {
 
 #[derive(Clone)]
 pub struct RpcService {
-    network: NetworkConfig,
-    contract: Contract,
+    pub network: NetworkConfig,
+    pub contract: Contract,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Env {
-    fastnear_api_key: String,
+    pub contract: String,
+    pub nearblocks_api_key: String,
+    pub fastnear_api_key: String,
 }
 
 impl Default for RpcService {
@@ -39,7 +56,14 @@ impl Default for RpcService {
 // 5 Epochs = 216,000
 
 impl RpcService {
-    pub fn new(id: &AccountId) -> Self {
+    pub fn new() -> Self {
+        dotenvy::dotenv().ok();
+
+        let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
+        Self::mainnet(env.contract.parse::<AccountId>().unwrap())
+    }
+
+    pub fn mainnet(contract: AccountId) -> Self {
         dotenvy::dotenv().ok();
 
         let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
@@ -57,7 +81,14 @@ impl RpcService {
 
         Self {
             network,
-            contract: Contract(id.clone()),
+            contract: Contract(contract),
+        }
+    }
+
+    pub fn sandbox(network: NetworkConfig, contract: AccountId) -> Self {
+        Self {
+            network,
+            contract: Contract(contract),
         }
     }
 
@@ -263,6 +294,44 @@ impl RpcService {
                     "Failed to get dao proposal on block: {:?}",
                     on_block_error
                 ))
+            }
+        }
+    }
+
+    pub async fn get_change_log(&self) -> Result<Vec<ChangeLog>, Status> {
+        let result: Result<Data<Vec<ChangeLog>>, _> = self
+            .contract
+            .call_function("get_change_log", json!({}))
+            .unwrap()
+            .read_only()
+            .fetch_from(&self.network)
+            .await;
+
+        match result {
+            Ok(res) => Ok(res.data),
+            Err(e) => {
+                eprintln!("Failed to get change log: {:?}", e);
+                Err(Status::InternalServerError)
+            }
+        }
+    }
+
+    pub async fn get_change_log_since(&self, block_id: i64) -> anyhow::Result<Vec<ChangeLog>> {
+        match self
+            .contract
+            .call_function("get_change_log_since", json!({"since": block_id}))
+            .unwrap()
+            .read_only()
+            .fetch_from(&self.network)
+            .await
+        {
+            Ok(res) => Ok(res.data),
+            Err(e) => {
+                eprintln!(
+                    "Failed to get change log since: {:?} error: {:?}",
+                    block_id, e
+                );
+                Err(anyhow::anyhow!("Failed to get change log since: {:?}", e))
             }
         }
     }

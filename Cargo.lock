@@ -2225,6 +2225,7 @@ dependencies = [
  "near-primitives",
  "near-sdk",
  "near-token",
+ "near-workspaces",
  "openssl",
  "reqwest",
  "serde",
