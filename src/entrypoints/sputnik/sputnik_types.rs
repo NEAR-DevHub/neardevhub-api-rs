@@ -12,7 +12,7 @@ use super::policy::VersionedPolicy;
 
 pub type Balance = u128;
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ProposalOutput {
     pub id: u64,

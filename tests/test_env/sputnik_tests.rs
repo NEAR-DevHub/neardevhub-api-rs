@@ -6,8 +6,8 @@ use devhub_cache_api::{
     types::PaginatedResponse,
 };
 // use anyhow::Result;
+use near_api::Contract;
 use near_sdk::AccountId;
-
 #[rocket::async_test]
 async fn test_get_dao_proposals() {
     use rocket::local::asynchronous::Client;
@@ -340,11 +340,15 @@ async fn test_if_the_last_ten_will_get_indexed() {
     let contract_string: String = std::env::var("SPUTNIK_CONTRACT")
         .unwrap_or_else(|_| "testing-treasury.sputnik-dao.near".to_string());
     let contract_account_id: AccountId = contract_string.parse().unwrap();
+    let contract = Contract(contract_account_id.clone());
     println!("contract_account_id: {:?}", contract_account_id);
     // Get all proposal ids from the RPC service
     let rpc_service = RpcService::mainnet(contract_account_id);
-    let last_proposal_id = match rpc_service.get_last_proposal_id().await {
-        Ok(response) => response.data,
+    let last_proposal_id = match rpc_service
+        .get_last_proposal_id(contract.clone(), None)
+        .await
+    {
+        Ok(response) => response,
         Err(e) => {
             eprintln!("Failed to get the last proposal ID: {:?}", e);
             101
@@ -357,7 +361,13 @@ async fn test_if_the_last_ten_will_get_indexed() {
     let last_ten_proposal_outputs: Vec<ProposalOutput> = futures::stream::iter(last_ten_ids)
         .then(|id| {
             let rpc_service = rpc_service.clone();
-            async move { rpc_service.get_dao_proposal(id - 1).await.unwrap().data }
+            let contract = contract.clone();
+            async move {
+                rpc_service
+                    .get_dao_proposal(contract, id - 1, None)
+                    .await
+                    .unwrap()
+            }
         })
         .collect()
         .await;

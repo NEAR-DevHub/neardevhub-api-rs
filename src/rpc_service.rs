@@ -10,7 +10,6 @@ use near_jsonrpc_client::methods::query::RpcQueryRequest;
 use rocket::http::Status;
 use rocket::serde::json::json;
 use serde::Deserialize;
-use serde_json::Value;
 
 #[derive(Deserialize, Clone)]
 pub struct ChangeLog {
@@ -125,64 +124,6 @@ impl RpcService {
         result
     }
 
-    // sputnik contract
-    pub async fn get_dao_proposal(
-        &self,
-        proposal_id: i64,
-    ) -> Result<Data<ProposalOutput>, near_api::errors::QueryError<RpcQueryRequest>> {
-        println!("get_dao_proposal: {:?}", proposal_id);
-        let result: Result<Data<ProposalOutput>, _> = match self
-            .contract
-            .call_function("get_proposal", json!({ "id": proposal_id }))
-            .unwrap()
-            .read_only()
-            .fetch_from(&self.network)
-            .await
-        {
-            Ok(res) => Ok(res),
-            Err(e) => {
-                eprintln!("Failed to get dao proposal: {:?}", e);
-                Err(e)
-            }
-        };
-
-        result
-    }
-
-    // sputnik contract
-    pub async fn get_last_proposal_id(
-        &self,
-    ) -> Result<Data<i64>, near_api::errors::QueryError<RpcQueryRequest>> {
-        let result: Result<Data<i64>, _> = self
-            .contract
-            .call_function("get_last_proposal_id", json!({}))
-            .unwrap()
-            .read_only()
-            .fetch_from(&self.network)
-            .await;
-
-        result
-    }
-
-    pub async fn get_dao_proposals(
-        &self,
-        from_index: i32,
-        limit: i32,
-    ) -> Result<Data<Vec<ProposalOutput>>, near_api::errors::QueryError<RpcQueryRequest>> {
-        let result: Result<Data<Vec<ProposalOutput>>, _> = self
-            .contract
-            .call_function(
-                "get_proposals",
-                json!({ "from_index": from_index, "limit": limit }),
-            )
-            .unwrap()
-            .read_only()
-            .fetch_from(&self.network)
-            .await;
-
-        result
-    }
-
     // devhub contract
     pub async fn get_all_proposal_ids(&self) -> Result<Vec<i32>, Status> {
         let result: Result<Data<Vec<i32>>, _> = self
@@ -258,47 +199,7 @@ impl RpcService {
         }
     }
 
-    // sputnik contract
-    pub async fn get_dao_proposal_on_block(
-        &self,
-        proposal_id: i64,
-        block_id: i64,
-    ) -> anyhow::Result<ProposalOutput> {
-        let result: Result<Data<Value>, near_api::errors::QueryError<RpcQueryRequest>> = self
-            .contract
-            .call_function("get_proposal", json!({ "id": proposal_id }))
-            .unwrap()
-            .read_only()
-            .at(Reference::AtBlock(block_id as u64))
-            .fetch_from(&self.network)
-            .await;
-
-        match result {
-            Ok(raw_json) => match serde_json::from_value::<ProposalOutput>(raw_json.data) {
-                Ok(output) => Ok(output),
-                Err(e) => {
-                    eprintln!("Deserialization error: {:?}", e);
-                    Err(anyhow::anyhow!("Deserialization error: {:?}", e))
-                }
-            },
-            Err(on_block_error) => {
-                eprintln!(
-                    "get_dao_proposal_on_block with id: {:?} on block: {:?}",
-                    proposal_id, block_id
-                );
-
-                eprintln!(
-                    "Failed to get dao proposal on block Error: {:?}",
-                    on_block_error
-                );
-                Err(anyhow::anyhow!(
-                    "Failed to get dao proposal on block: {:?}",
-                    on_block_error
-                ))
-            }
-        }
-    }
-
+    // devhub contract
     pub async fn get_change_log(&self) -> Result<Vec<ChangeLog>, Status> {
         let result: Result<Data<Vec<ChangeLog>>, _> = self
             .contract
@@ -317,6 +218,7 @@ impl RpcService {
         }
     }
 
+    // devhub contract
     pub async fn get_change_log_since(&self, block_id: i64) -> anyhow::Result<Vec<ChangeLog>> {
         match self
             .contract
@@ -337,73 +239,108 @@ impl RpcService {
         }
     }
 
-    // sputnik contract
-    pub async fn get_dao_proposals_on_block(
+    async fn query_contract<T, P>(
         &self,
+        contract: Contract,
+        method: &str,
+        params: P,
+        block_id: Option<i64>,
+    ) -> anyhow::Result<T>
+    where
+        P: serde::Serialize,
+        T: serde::de::DeserializeOwned + Send + Sync + 'static,
+    {
+        let mut query = contract.call_function(method, params).unwrap().read_only();
+
+        // Apply block reference if provided
+        if let Some(block) = block_id {
+            query = query.at(Reference::AtBlock(block as u64));
+        }
+
+        // Execute the query
+        match query.fetch_from(&self.network).await {
+            Ok(data) => Ok(data.data),
+            Err(e) => {
+                let context = if let Some(block) = block_id {
+                    format!("at block {}", block)
+                } else {
+                    "at current block".to_string()
+                };
+
+                eprintln!("Failed to query method '{}' {}: {:?}", method, context, e);
+                Err(anyhow::anyhow!(
+                    "Failed to query method '{}' {}: {:?}",
+                    method,
+                    context,
+                    e
+                ))
+            }
+        }
+    }
+
+    // sputnik contract
+    pub async fn get_dao_proposal(
+        &self,
+        contract: Contract,
+        proposal_id: i64,
+        block_id: Option<i64>,
+    ) -> anyhow::Result<ProposalOutput> {
+        println!("get_dao_proposal: {:?}", proposal_id);
+        self.query_contract(
+            contract,
+            "get_proposal",
+            json!({ "id": proposal_id }),
+            block_id,
+        )
+        .await
+    }
+
+    // sputnik contract
+    pub async fn get_dao_proposals(
+        &self,
+        contract: Contract,
         from_index: i32,
         limit: i32,
-        block_id: i64,
-    ) -> Result<Vec<ProposalOutput>, Status> {
-        let result: Result<
-            Data<Vec<ProposalOutput>>,
-            near_api::errors::QueryError<RpcQueryRequest>,
-        > = self
-            .contract
-            .call_function(
-                "get_proposals",
-                json!({ "from_index": from_index, "limit": limit }),
-            )
-            .unwrap()
-            .read_only()
-            .at(Reference::AtBlock(block_id as u64))
-            .fetch_from(&self.network)
-            .await;
+        block_id: Option<i64>,
+    ) -> anyhow::Result<Vec<ProposalOutput>> {
+        self.query_contract(
+            contract,
+            "get_proposals",
+            json!({ "from_index": from_index, "limit": limit }),
+            block_id,
+        )
+        .await
+    }
 
-        match result {
-            Ok(res) => Ok(res.data),
-            Err(on_block_error) => match self.get_dao_proposals(from_index, limit).await {
-                Ok(proposals) => Ok(proposals.data),
-                Err(rpc_error) => {
-                    eprintln!("Failed to get dao proposals from RPC on block height {} from_index {} limit {}", block_id, from_index, limit);
-                    eprintln!("{:?}", on_block_error);
-                    eprintln!("{:?}", rpc_error);
-                    Err(Status::InternalServerError)
-                }
-            },
-        }
+    // sputnik contract
+    pub async fn get_last_proposal_id(
+        &self,
+        contract: Contract,
+        block_id: Option<i64>,
+    ) -> anyhow::Result<i64> {
+        self.query_contract(contract, "get_last_proposal_id", json!({}), block_id)
+            .await
+    }
+
+    // sputnik contract
+    pub async fn get_dao_proposal_on_block(
+        &self,
+        contract: Contract,
+        proposal_id: i64,
+        block_id: i64,
+    ) -> anyhow::Result<ProposalOutput> {
+        self.get_dao_proposal(contract, proposal_id, Some(block_id))
+            .await
     }
 
     // sputnik contract
     pub async fn get_last_proposal_id_on_block(
         &self,
+        contract: Contract,
         block_id: i64,
-    ) -> Result<Data<i64>, near_api::errors::QueryError<RpcQueryRequest>> {
+    ) -> anyhow::Result<i64> {
         println!("Attempting to get last proposal ID at block {}", block_id);
         println!("Using contract: {}", self.contract.0);
-        println!("RPC endpoints configured: {:?}", self.network.rpc_endpoints);
-
-        let result: Result<Data<i64>, _> = self
-            .contract
-            .call_function("get_last_proposal_id", json!({}))
-            .unwrap()
-            .read_only()
-            .at(Reference::AtBlock(block_id as u64))
-            .fetch_from(&self.network)
-            .await;
-
-        match &result {
-            Ok(data) => {
-                println!("Successfully retrieved last proposal ID: {}", data.data);
-                result
-            }
-            Err(e) => {
-                eprintln!(
-                    "Failed to get last proposal ID at block {}: {:?}",
-                    block_id, e
-                );
-                eprintln!("Error details: {:#?}", e);
-                result
-            }
-        }
+        self.get_last_proposal_id(contract, Some(block_id)).await
     }
 }

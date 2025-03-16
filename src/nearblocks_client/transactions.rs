@@ -136,16 +136,22 @@ pub async fn update_dao_nearblocks_data(
     println!("Total transactions fetched: {}", all_transactions.len());
 
     // Process transactions and get the last successful block height
-    let last_successful_block =
-        process_dao_transactions(&all_transactions, db.into(), contract, rpc_service).await?;
-
-    // Only update the after_block if all transactions were processed successfully
-    println!(
-        "Setting last updated info for contract: {} with block_height: {}",
-        contract, last_successful_block
-    );
+    process_dao_transactions(&all_transactions, db.into(), contract, rpc_service).await?;
 
     Ok(())
+}
+
+fn is_fatal_error(error: &anyhow::Error) -> bool {
+    let error_msg = error.to_string();
+
+    // List of non-fatal error messages
+    let non_fatal_errors = [
+        "non-fatal",
+        // "Failed to get proposal from RPC",
+        // Add more non-fatal error messages here
+    ];
+
+    !non_fatal_errors.iter().any(|&msg| error_msg.contains(msg))
 }
 
 pub async fn process_dao_transactions(
@@ -153,10 +159,7 @@ pub async fn process_dao_transactions(
     db: &State<DB>,
     contract: &AccountId,
     rpc_service: &RpcService,
-) -> anyhow::Result<i64> {
-    // Return the last successful block height
-    let mut last_successful_block = None;
-
+) -> anyhow::Result<()> {
     for transaction in transactions.iter() {
         if let Some(action) = transaction
             .actions
@@ -172,35 +175,30 @@ pub async fn process_dao_transactions(
             }
 
             // Process the transaction and propagate any errors
-            match action.method.as_deref().unwrap_or("") {
+            let result = match action.method.as_deref().unwrap_or("") {
                 "add_proposal" => {
-                    println!("add_proposal");
-                    let block_height =
-                        handle_add_proposal(transaction.to_owned(), db, contract, rpc_service)
-                            .await?;
-                    last_successful_block = Some(block_height);
+                    handle_add_proposal(transaction.to_owned(), db, contract, rpc_service).await
                 }
                 "act_proposal" => {
-                    println!("act_proposal");
-                    let block_height =
-                        handle_act_proposal(transaction.to_owned(), db, contract, rpc_service)
-                            .await?;
-                    last_successful_block = Some(block_height);
+                    handle_act_proposal(transaction.to_owned(), db, contract, rpc_service).await
                 }
                 _ => {
-                    if action.action == "FUNCTION_CALL" {
-                        println!("Unhandled method: {:?}", action.method.as_ref().unwrap());
-                    } else {
-                        println!("Unhandled action: {:?}", action.action);
-                    }
                     continue;
                 }
             };
+
+            if let Err(e) = result {
+                if is_fatal_error(&e) {
+                    eprintln!("Fatal error, stopping: {:?}", e);
+                    return Ok(());
+                } else {
+                    eprintln!("Non-fatal error, continuing: {:?}", e);
+                    continue;
+                }
+            }
         }
     }
-
-    last_successful_block
-        .ok_or_else(|| anyhow::anyhow!("No transactions were processed successfully"))
+    Ok(())
 }
 
 pub async fn process(

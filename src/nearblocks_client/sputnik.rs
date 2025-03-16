@@ -6,6 +6,7 @@ use crate::entrypoints::sputnik::sputnik_types::{
 use crate::nearblocks_client::types::Transaction;
 use crate::rpc_service::RpcService;
 use near_account_id::AccountId;
+use near_api::Contract;
 use near_sdk::json_types::U64;
 use regex::Regex;
 use rocket::State;
@@ -82,6 +83,10 @@ fn decode_proposal_description(description: &str) -> String {
     "null".to_string()
 }
 
+/**
+ * TODO we could get the last stored proposal id from the database. if we stored 1,2 and 3 this is 4.
+ * FIXME: the RPC returns that some of these blocks have been garbage collected.
+ */
 pub async fn handle_add_proposal(
     transaction: Transaction,
     db: &State<DB>,
@@ -92,13 +97,17 @@ pub async fn handle_add_proposal(
       get_last_proposal_id actually returns the number of proposals starting from 0.
       https://github.com/near-daos/sputnik-dao-contract/blob/3d568f9517a8c7a6510786d978bb25b180501841/sputnikdao2/src/proposals.rs#L532
     */
+
     let proposal_id = match rpc_service
-        .get_last_proposal_id_on_block(transaction.receipt_block.block_height)
+        .get_last_proposal_id_on_block(
+            Contract(contract.clone()),
+            transaction.receipt_block.block_height,
+        )
         .await
     {
-        Ok(last_proposal_id) => last_proposal_id.data - 1,
+        Ok(last_proposal_id) => last_proposal_id - 1,
         Err(e) => {
-            eprintln!("Failed to get last dao proposal id on block: {:?}", e);
+            eprintln!("fatal:Failed to get last dao proposal id on block: {:?}", e);
             let _ = db
                 .track_handler_error(HandlerError {
                     transaction_id: transaction.id,
@@ -111,15 +120,16 @@ pub async fn handle_add_proposal(
                     timestamp: chrono::Utc::now(),
                 })
                 .await;
-            return Err(anyhow::anyhow!("Failed to get last proposal ID"));
+            return Err(anyhow::anyhow!("fatal: Failed to get last proposal ID"));
         }
     };
 
+    // Get the proposal description and kind.
     let add_proposal_action = transaction
         .actions
         .as_ref()
         .and_then(|actions| actions.first())
-        .ok_or(anyhow::anyhow!("Failed to get add proposal action"))?;
+        .ok_or(anyhow::anyhow!("fatal: Failed to get add proposal action"))?;
 
     let add_proposal_args: AddProposalArgs = serde_json::from_str(
         add_proposal_action
@@ -129,19 +139,16 @@ pub async fn handle_add_proposal(
     )
     .map_err(|e| {
         eprintln!("Failed to parse AddProposalArgs: {}", e);
-        anyhow::anyhow!("Failed to parse AddProposalArgs")
+        anyhow::anyhow!("fatal: Failed to parse AddProposalArgs")
     })?;
 
-    let proposer =
-        AccountId::from_str(transaction.predecessor_account_id.as_str()).map_err(|e| {
-            eprintln!("Invalid account ID: {}", e);
-            anyhow::anyhow!("Invalid account ID")
-        })?;
+    let proposer = AccountId::from_str(transaction.predecessor_account_id.as_str())
+        .map_err(|_| anyhow::anyhow!("fatal: Invalid account ID"))?;
 
     let proposal_output = ProposalOutput {
         id: proposal_id.try_into().map_err(|e| {
             eprintln!("Failed to convert proposal_id: {}", e);
-            anyhow::anyhow!("Failed to convert proposal_id")
+            anyhow::anyhow!("fatal: Failed to convert proposal_id")
         })?,
         proposal: Proposal {
             proposer,
@@ -155,7 +162,11 @@ pub async fn handle_add_proposal(
     };
 
     let daop = match rpc_service
-        .get_dao_proposal_on_block(proposal_id, transaction.receipt_block.block_height)
+        .get_dao_proposal_on_block(
+            Contract(contract.clone()),
+            proposal_id,
+            transaction.receipt_block.block_height,
+        )
         .await
     {
         Ok(daop) => daop,
@@ -171,22 +182,22 @@ pub async fn handle_add_proposal(
     let proposal_action = decode_proposal_description(&daop.proposal.description);
 
     let mut tx = db.begin().await.map_err(|e| {
-        eprintln!("Failed to begin transaction: {:?}", e);
-        anyhow::anyhow!("Failed to begin transaction")
+        eprintln!("fatal: Failed to begin transaction: {:?}", e);
+        anyhow::anyhow!("fatal: Failed to begin transaction")
     })?;
 
     let kind = serde_json::to_value(daop.proposal.kind).unwrap_or_else(|e| {
-        eprintln!("Failed to serialize proposal kind: {:?}", e);
+        eprintln!("fatal: Failed to serialize proposal kind: {:?}", e);
         serde_json::Value::Null
     });
 
     let vote_counts = serde_json::to_value(daop.proposal.vote_counts).unwrap_or_else(|e| {
-        eprintln!("Failed to serialize vote counts: {:?}", e);
+        eprintln!("fatal: Failed to serialize vote counts: {:?}", e);
         serde_json::Value::Null
     });
 
     let votes = serde_json::to_value(&daop.proposal.votes).unwrap_or_else(|e| {
-        eprintln!("Failed to serialize votes: {:?}", e);
+        eprintln!("fatal: Failed to serialize votes: {:?}", e);
         serde_json::Value::Null
     });
 
@@ -211,20 +222,26 @@ pub async fn handle_add_proposal(
     DB::upsert_dao_proposal_snapshot(&mut tx, record)
         .await
         .map_err(|e| {
-            eprintln!("Failed to insert transactions {}: {:?}", transaction.id, e);
-            anyhow::anyhow!("Failed to insert transactions")
+            eprintln!(
+                "fatal: Failed to insert transactions {}: {:?}",
+                transaction.id, e
+            );
+            anyhow::anyhow!("fatal: Failed to insert transactions")
         })?;
 
     DB::set_after_block(&mut tx, contract, transaction.block.block_height)
         .await
         .map_err(|e| {
-            eprintln!("Failed to set last updated info for contract: {:?}", e);
-            anyhow::anyhow!("Failed to set last updated info for contract")
+            eprintln!(
+                "fatal: Failed to set last updated info for contract: {:?}",
+                e
+            );
+            anyhow::anyhow!("fatal: Failed to set last updated info for contract")
         })?;
 
     tx.commit().await.map_err(|e| {
-        eprintln!("Failed to commit transaction: {:?}", e);
-        anyhow::anyhow!("Failed to commit transaction")
+        eprintln!("fatal: Failed to commit transaction: {:?}", e);
+        anyhow::anyhow!("fatal: Failed to commit transaction")
     })?;
 
     println!("Inserted proposal snapshot {}", daop.id);
@@ -257,7 +274,7 @@ pub async fn handle_act_proposal(
 
     // This will error if the proposal is removed.
     let dao_proposal = match rpc_service
-        .get_dao_proposal_on_block(proposal_id, block_id)
+        .get_dao_proposal_on_block(Contract(contract.clone()), proposal_id, block_id)
         .await
     {
         Ok(dao_proposal) => dao_proposal,
