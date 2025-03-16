@@ -242,6 +242,52 @@ async fn get_unique_receivers(
     }
 }
 
+#[utoipa::path(get, path = "/dao/proposals/<account_id>/approvers")]
+#[get("/proposals/<account_id>/approvers")]
+async fn get_unique_approvers(
+    account_id: &str,
+    db: &State<DB>,
+) -> Result<Json<Vec<String>>, Status> {
+    let _ = match AccountId::from_str(account_id) {
+        Ok(contract) => contract,
+        Err(_) => {
+            eprintln!("Invalid account id: {}", account_id);
+            return Err(Status::BadRequest);
+        }
+    };
+
+    match db.get_dao_approvers(account_id).await {
+        Ok(approvers) => Ok(Json(approvers)),
+        Err(e) => {
+            eprintln!("Error fetching unique approvers: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
+}
+
+#[utoipa::path(get, path = "/dao/proposals/<account_id>/token_ids")]
+#[get("/proposals/<account_id>/token_ids")]
+async fn get_unique_token_ids(
+    account_id: &str,
+    db: &State<DB>,
+) -> Result<Json<Vec<String>>, Status> {
+    let _ = match AccountId::from_str(account_id) {
+        Ok(contract) => contract,
+        Err(_) => {
+            eprintln!("Invalid account id: {}", account_id);
+            return Err(Status::BadRequest);
+        }
+    };
+
+    match db.get_dao_token_ids(account_id).await {
+        Ok(token_ids) => Ok(Json(token_ids)),
+        Err(e) => {
+            eprintln!("Error fetching unique token IDs: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
+}
+
 pub fn stage() -> rocket::fairing::AdHoc {
     rocket::fairing::AdHoc::on_ignite("Rfp Stage", |rocket| async {
         println!("Rfp stage on ignite!");
@@ -257,6 +303,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
                 search,
                 sync_from_start,
                 get_unique_receivers,
+                get_unique_approvers,
             ],
         )
     })

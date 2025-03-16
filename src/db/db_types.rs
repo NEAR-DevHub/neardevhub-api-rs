@@ -140,6 +140,8 @@ pub struct RfpDumpRecord {
     pub rfp_id: i32,
 }
 
+// Requested token
+// From / To token amount we also need to store this individually as an integer
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
 pub struct SputnikProposalSnapshotRecord {
     pub description: String,
@@ -147,6 +149,8 @@ pub struct SputnikProposalSnapshotRecord {
     pub proposal_id: i32,
     pub kind: serde_json::Value,
     pub receiver_id: Option<String>,
+    pub token_id: Option<String>,
+    pub token_amount: Option<String>,
     pub proposer: String,
     pub status: String,
     pub submission_time: i64,

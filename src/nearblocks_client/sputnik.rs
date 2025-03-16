@@ -1,7 +1,7 @@
 use crate::db::db_types::{HandlerError, SputnikProposalSnapshotRecord};
 use crate::db::DB;
 use crate::entrypoints::sputnik::sputnik_types::{
-    Action, Proposal, ProposalKind, ProposalOutput, ProposalStatus,
+    Action, Proposal, ProposalKind, ProposalOutput, ProposalStatus, Vote,
 };
 use crate::nearblocks_client::types::Transaction;
 use crate::rpc_service::RpcService;
@@ -187,6 +187,9 @@ pub async fn handle_add_proposal(
     })?;
 
     let receiver_id = get_receiver_id(&daop.proposal.kind);
+    let token_id = get_token_id(&daop.proposal.kind);
+    let token_amount = get_token_amount(&daop.proposal.kind);
+
     let kind = serde_json::to_value(daop.proposal.kind).unwrap_or_else(|e| {
         eprintln!("fatal: Failed to serialize proposal kind: {:?}", e);
         serde_json::Value::Null
@@ -208,6 +211,8 @@ pub async fn handle_add_proposal(
         proposal_id: daop.id as i32,
         kind,
         receiver_id,
+        token_id,
+        token_amount,
         proposer: daop.proposal.proposer.to_string(),
         status: daop.proposal.status.to_string(),
         submission_time: daop.proposal.submission_time.0 as i64,
@@ -251,12 +256,39 @@ pub async fn handle_add_proposal(
     Ok(transaction.block.block_height)
 }
 
+/**
+ * Get's the receiver id from the proposal kind to store in a different table to query it for the history dropdown filter.
+ */
 fn get_receiver_id(kind: &ProposalKind) -> Option<String> {
     match kind {
         ProposalKind::FunctionCall { receiver_id, .. } => Some(receiver_id.to_string()),
         ProposalKind::UpgradeRemote { receiver_id, .. } => Some(receiver_id.to_string()),
         ProposalKind::Transfer { receiver_id, .. } => Some(receiver_id.to_string()),
         ProposalKind::BountyDone { receiver_id, .. } => Some(receiver_id.to_string()),
+        _ => None,
+    }
+}
+
+/**
+ * Get's the approvers from the votes to store in a different table to query it for the history dropdown filter.
+ */
+fn get_approvers(votes: &HashMap<AccountId, Vote>) -> Vec<String> {
+    votes
+        .iter()
+        .map(|(account_id, _)| account_id.to_string())
+        .collect()
+}
+
+fn get_token_amount(kind: &ProposalKind) -> Option<String> {
+    match kind {
+        ProposalKind::Transfer { amount, .. } => Some(amount.0.to_string()),
+        _ => None,
+    }
+}
+
+fn get_token_id(kind: &ProposalKind) -> Option<String> {
+    match kind {
+        ProposalKind::Transfer { token_id, .. } => Some(token_id.to_string()),
         _ => None,
     }
 }
@@ -328,7 +360,10 @@ pub async fn handle_act_proposal(
         anyhow::anyhow!("Failed to begin transaction")
     })?;
 
+    let token_amount = get_token_amount(&dao_proposal.proposal.kind);
     let receiver_id = get_receiver_id(&dao_proposal.proposal.kind);
+    let token_id = get_token_id(&dao_proposal.proposal.kind);
+
     let kind = serde_json::to_value(dao_proposal.proposal.kind).unwrap_or_else(|e| {
         eprintln!("Failed to serialize proposal kind: {:?}", e);
         serde_json::Value::Null
@@ -338,6 +373,14 @@ pub async fn handle_act_proposal(
         eprintln!("Failed to serialize vote counts: {:?}", e);
         serde_json::Value::Null
     });
+
+    let approvers = get_approvers(&dao_proposal.proposal.votes);
+    DB::upsert_dao_approvers(&mut tx, contract.to_string().as_str(), &approvers)
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to upsert dao approvers: {:?}", e);
+            anyhow::anyhow!("Failed to upsert dao approvers")
+        })?;
 
     let votes = serde_json::to_value(&dao_proposal.proposal.votes).unwrap_or_else(|e| {
         eprintln!("Failed to serialize votes: {:?}", e);
@@ -360,6 +403,8 @@ pub async fn handle_act_proposal(
             })?,
             kind,
             receiver_id,
+            token_id,
+            token_amount,
             proposer: dao_proposal.proposal.proposer.to_string(),
             status: dao_proposal.proposal.status.to_string(),
             submission_time: dao_proposal.proposal.submission_time.0 as i64,

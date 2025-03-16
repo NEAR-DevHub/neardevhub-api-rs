@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                  INSERT INTO dao_approvers (dao_instance, approver)\n                  VALUES ($1, $2)\n                  ON CONFLICT (dao_instance, approver) DO NOTHING\n                  ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "08a48755fa2b8ddfb60ee9c4c9d79c2d4aa774e82b186162d58b7403b6f44ee1"
+}

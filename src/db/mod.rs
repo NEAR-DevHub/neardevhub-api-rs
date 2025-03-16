@@ -367,6 +367,15 @@ impl DB {
             _ => None,
         });
 
+        // Convert u128 to strings for the database query
+        // let min_amount_str = min_amount.map(|val| val.to_string());
+        // let max_amount_str = max_amount.map(|val| val.to_string());
+        // let token_range_clause =
+        // AND ($2::TEXT IS NULL OR token_amount::NUMERIC >= $2::NUMERIC)
+        // AND ($3::TEXT IS NULL OR token_amount::NUMERIC <= $3::NUMERIC)
+        // min_amount_str.as_deref(),
+        // max_amount_str.as_deref(),
+
         // Build the SQL query with the validated order clause
         let data_sql = format!(
             r#"
@@ -991,7 +1000,10 @@ impl DB {
                 proposal_action = $12,
                 tx_timestamp = $13,
                 hash = $14,
-                block_height = $15
+                block_height = $15,
+                receiver_id = $16,
+                token_id = $17,
+                token_amount = $18
             WHERE id = $1
             RETURNING id
             "#,
@@ -1009,7 +1021,10 @@ impl DB {
             sputnik_proposal.proposal_action,
             sputnik_proposal.tx_timestamp,
             sputnik_proposal.hash,
-            sputnik_proposal.block_height
+            sputnik_proposal.block_height,
+            sputnik_proposal.receiver_id,
+            sputnik_proposal.token_id,
+            sputnik_proposal.token_amount
         )
         .fetch_optional(tx.as_mut())
         .await?;
@@ -1022,9 +1037,9 @@ impl DB {
             let rec = sqlx::query!(
                 r#"
                 INSERT INTO dao_proposals (
-                    description, id, proposal_id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash, block_height
+                    description, id, proposal_id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash, block_height, receiver_id, token_id, token_amount
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
                 )
                 ON CONFLICT (id) DO NOTHING
                 RETURNING id
@@ -1043,7 +1058,10 @@ impl DB {
                 sputnik_proposal.proposal_action,
                 sputnik_proposal.tx_timestamp,
                 sputnik_proposal.hash,
-                sputnik_proposal.block_height
+                sputnik_proposal.block_height,
+                sputnik_proposal.receiver_id,
+                sputnik_proposal.token_id,
+                sputnik_proposal.token_amount
             )
             .fetch_optional(tx.as_mut())
             .await;
@@ -1217,9 +1235,67 @@ impl DB {
         .await?;
 
         // Filter out None values and unwrap the Some values
-        let receiver_ids: Vec<String> = receiver_ids.into_iter().filter_map(|id| id).collect();
+        let receiver_ids: Vec<String> = receiver_ids.into_iter().flatten().collect();
 
         Ok(receiver_ids)
+    }
+
+    pub async fn get_dao_token_ids(&self, dao_instance: &str) -> Result<Vec<String>, sqlx::Error> {
+        let token_ids = sqlx::query_scalar!(
+            r#"
+            SELECT DISTINCT token_id
+            FROM dao_proposals
+            WHERE dao_instance = $1
+            AND token_id IS NOT NULL
+            AND token_id != ''
+            ORDER BY token_id
+            "#,
+            dao_instance
+        )
+        .fetch_all(&self.0)
+        .await?;
+
+        // Filter out None values and unwrap the Some values
+        let token_ids: Vec<String> = token_ids.into_iter().flatten().collect();
+
+        Ok(token_ids)
+    }
+
+    pub async fn get_dao_approvers(&self, dao_instance: &str) -> Result<Vec<String>, sqlx::Error> {
+        let approvers = sqlx::query_scalar!(
+            r#"
+          SELECT approver
+          FROM dao_approvers
+          WHERE dao_instance = $1
+          ORDER BY approver
+          "#,
+            dao_instance
+        )
+        .fetch_all(&self.0)
+        .await?;
+
+        Ok(approvers)
+    }
+
+    pub async fn upsert_dao_approvers(
+        tx: &mut Transaction<'static, Postgres>,
+        dao_instance: &str,
+        approvers: &[String],
+    ) -> Result<(), sqlx::Error> {
+        for approver in approvers {
+            sqlx::query!(
+                r#"
+                  INSERT INTO dao_approvers (dao_instance, approver)
+                  VALUES ($1, $2)
+                  ON CONFLICT (dao_instance, approver) DO NOTHING
+                  "#,
+                dao_instance,
+                approver
+            )
+            .execute(tx.as_mut())
+            .await?;
+        }
+        Ok(())
     }
 
     pub async fn update_proposal_status(&self, id: String, status: &str) -> Result<(), Status> {
