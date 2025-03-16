@@ -219,6 +219,29 @@ async fn sync_from_start(
     }
 }
 
+#[utoipa::path(get, path = "/dao/proposals/<account_id>/receivers")]
+#[get("/proposals/<account_id>/receivers")]
+async fn get_unique_receivers(
+    account_id: &str,
+    db: &State<DB>,
+) -> Result<Json<Vec<String>>, Status> {
+    let _ = match AccountId::from_str(account_id) {
+        Ok(contract) => contract,
+        Err(_) => {
+            eprintln!("Invalid account id: {}", account_id);
+            return Err(Status::BadRequest);
+        }
+    };
+
+    match db.get_unique_receiver_ids(account_id).await {
+        Ok(receiver_ids) => Ok(Json(receiver_ids)),
+        Err(e) => {
+            eprintln!("Error fetching unique receiver IDs: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
+}
+
 pub fn stage() -> rocket::fairing::AdHoc {
     rocket::fairing::AdHoc::on_ignite("Rfp Stage", |rocket| async {
         println!("Rfp stage on ignite!");
@@ -233,6 +256,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
                 reset_and_test,
                 search,
                 sync_from_start,
+                get_unique_receivers,
             ],
         )
     })

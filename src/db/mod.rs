@@ -1196,6 +1196,32 @@ impl DB {
         Ok((proposals, total.unwrap_or(0)))
     }
 
+    pub async fn get_unique_receiver_ids(
+        &self,
+        dao_instance: &str,
+    ) -> Result<Vec<String>, sqlx::Error> {
+        // Query to get all unique receiver_ids for a given contract, excluding nulls and empty strings
+        let receiver_ids = sqlx::query_scalar!(
+            r#"
+            SELECT DISTINCT receiver_id
+            FROM dao_proposals
+            WHERE 
+                dao_instance = $1
+                AND receiver_id IS NOT NULL
+                AND receiver_id != ''
+            ORDER BY receiver_id
+            "#,
+            dao_instance
+        )
+        .fetch_all(&self.0)
+        .await?;
+
+        // Filter out None values and unwrap the Some values
+        let receiver_ids: Vec<String> = receiver_ids.into_iter().filter_map(|id| id).collect();
+
+        Ok(receiver_ids)
+    }
+
     pub async fn update_proposal_status(&self, id: String, status: &str) -> Result<(), Status> {
         sqlx::query_scalar!(
             "UPDATE dao_proposals SET status = $1 WHERE id = $2 RETURNING id",
