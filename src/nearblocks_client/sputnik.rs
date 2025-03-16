@@ -186,6 +186,7 @@ pub async fn handle_add_proposal(
         anyhow::anyhow!("fatal: Failed to begin transaction")
     })?;
 
+    let receiver_id = get_receiver_id(&daop.proposal.kind);
     let kind = serde_json::to_value(daop.proposal.kind).unwrap_or_else(|e| {
         eprintln!("fatal: Failed to serialize proposal kind: {:?}", e);
         serde_json::Value::Null
@@ -206,6 +207,7 @@ pub async fn handle_add_proposal(
         id: format!("{}_{}", daop.id, contract),
         proposal_id: daop.id as i32,
         kind,
+        receiver_id,
         proposer: daop.proposal.proposer.to_string(),
         status: daop.proposal.status.to_string(),
         submission_time: daop.proposal.submission_time.0 as i64,
@@ -247,6 +249,16 @@ pub async fn handle_add_proposal(
     println!("Inserted proposal snapshot {}", daop.id);
 
     Ok(transaction.block.block_height)
+}
+
+fn get_receiver_id(kind: &ProposalKind) -> Option<String> {
+    match kind {
+        ProposalKind::FunctionCall { receiver_id, .. } => Some(receiver_id.to_string()),
+        ProposalKind::UpgradeRemote { receiver_id, .. } => Some(receiver_id.to_string()),
+        ProposalKind::Transfer { receiver_id, .. } => Some(receiver_id.to_string()),
+        ProposalKind::BountyDone { receiver_id, .. } => Some(receiver_id.to_string()),
+        _ => None,
+    }
 }
 
 pub async fn handle_act_proposal(
@@ -316,6 +328,7 @@ pub async fn handle_act_proposal(
         anyhow::anyhow!("Failed to begin transaction")
     })?;
 
+    let receiver_id = get_receiver_id(&dao_proposal.proposal.kind);
     let kind = serde_json::to_value(dao_proposal.proposal.kind).unwrap_or_else(|e| {
         eprintln!("Failed to serialize proposal kind: {:?}", e);
         serde_json::Value::Null
@@ -346,6 +359,7 @@ pub async fn handle_act_proposal(
                 anyhow::anyhow!("Failed to convert proposal_id")
             })?,
             kind,
+            receiver_id,
             proposer: dao_proposal.proposal.proposer.to_string(),
             status: dao_proposal.proposal.status.to_string(),
             submission_time: dao_proposal.proposal.submission_time.0 as i64,

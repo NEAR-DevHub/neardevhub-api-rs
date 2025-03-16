@@ -146,6 +146,7 @@ pub struct SputnikProposalSnapshotRecord {
     pub id: String,
     pub proposal_id: i32,
     pub kind: serde_json::Value,
+    pub receiver_id: Option<String>,
     pub proposer: String,
     pub status: String,
     pub submission_time: i64,

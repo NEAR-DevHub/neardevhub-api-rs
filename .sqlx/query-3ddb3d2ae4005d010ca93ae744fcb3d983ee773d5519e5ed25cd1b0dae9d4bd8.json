@@ -77,6 +77,11 @@
         "ordinal": 14,
         "name": "block_height",
         "type_info": "Int8"
+      },
+      {
+        "ordinal": 15,
+        "name": "receiver_id",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -99,7 +104,8 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
   "hash": "3ddb3d2ae4005d010ca93ae744fcb3d983ee773d5519e5ed25cd1b0dae9d4bd8"
