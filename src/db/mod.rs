@@ -367,6 +367,12 @@ impl DB {
             _ => None,
         });
 
+        // TODO: add a token_id filter where multiple token_ids are provided
+        // TODO: add a receiver_id filter where multiple receiver_ids are provided
+        // TODO: add a min_amount and max_amount filter where two amounts are provided
+        // TODO: add a approvers filter where multiple approvers are provided
+        // Approvers are stored in the votes serde_jsonb column as an array of account ids
+
         // Convert u128 to strings for the database query
         // let min_amount_str = min_amount.map(|val| val.to_string());
         // let max_amount_str = max_amount.map(|val| val.to_string());
@@ -1155,6 +1161,7 @@ impl DB {
     pub async fn get_dao_proposal_by_hash(
         &self,
         hash: &str,
+        dao_instance: &str,
     ) -> Result<SputnikProposalSnapshotRecord, sqlx::Error> {
         sqlx::query_as!(
             SputnikProposalSnapshotRecord,
@@ -1162,10 +1169,12 @@ impl DB {
             SELECT *
             FROM dao_proposals
             WHERE hash = $1
+            AND dao_instance = $2
             ORDER BY submission_time DESC
             LIMIT 1
             "#,
             hash,
+            dao_instance,
         )
         .fetch_one(&self.0)
         .await
@@ -1174,6 +1183,7 @@ impl DB {
     pub async fn search_dao_proposals(
         &self,
         search_term: &str,
+        dao_instance: &str,
     ) -> Result<(Vec<SputnikProposalSnapshotRecord>, i64), sqlx::Error> {
         // First get the total count
         let total = sqlx::query_scalar!(
@@ -1181,10 +1191,12 @@ impl DB {
             SELECT COUNT(DISTINCT id)
             FROM dao_proposals
             WHERE 
-                LOWER(description) LIKE $1 OR
-                LOWER(hash) LIKE $1
+                dao_instance = $1 AND
+                (LOWER(description) LIKE $2 OR
+                LOWER(hash) LIKE $2)
             "#,
-            search_term
+            dao_instance,
+            search_term,
         )
         .fetch_one(&self.0)
         .await?;
