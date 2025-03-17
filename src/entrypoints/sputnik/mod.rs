@@ -46,7 +46,7 @@ async fn fetch_dao_proposals(
 #[utoipa::path(get, path = "/dao/proposals/search/<input>", params(
   ("input"= &str, Path, description ="Url encoded lowercase string to search for in proposal name, description, summary, and category fields."),
 ))]
-#[get("/proposals/search/<input>")]
+#[get("/proposals/search/<input>", rank = 2)]
 async fn search(
     input: String,
     db: &State<DB>,
@@ -194,7 +194,7 @@ async fn reset_and_test(
 }
 
 #[utoipa::path(get, path = "/proposals/sync_from_start/<account_id>")]
-#[get("/proposals/sync_from_start/<account_id>")]
+#[get("/proposals/sync_from_start/<account_id>", rank = 2)]
 async fn sync_from_start(
     account_id: &str,
     db: &State<DB>,
@@ -220,7 +220,7 @@ async fn sync_from_start(
 }
 
 #[utoipa::path(get, path = "/dao/proposals/<account_id>/receivers")]
-#[get("/proposals/<account_id>/receivers")]
+#[get("/proposals/<account_id>/receivers", rank = 1)]
 async fn get_unique_receivers(
     account_id: &str,
     db: &State<DB>,
@@ -243,7 +243,7 @@ async fn get_unique_receivers(
 }
 
 #[utoipa::path(get, path = "/dao/proposals/<account_id>/approvers")]
-#[get("/proposals/<account_id>/approvers")]
+#[get("/proposals/<account_id>/approvers", rank = 1)]
 async fn get_unique_approvers(
     account_id: &str,
     db: &State<DB>,
@@ -266,7 +266,7 @@ async fn get_unique_approvers(
 }
 
 #[utoipa::path(get, path = "/dao/proposals/<account_id>/token_ids")]
-#[get("/proposals/<account_id>/token_ids")]
+#[get("/proposals/<account_id>/token_ids", rank = 1)]
 async fn get_unique_token_ids(
     account_id: &str,
     db: &State<DB>,
@@ -304,6 +304,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
                 sync_from_start,
                 get_unique_receivers,
                 get_unique_approvers,
+                get_unique_token_ids,
             ],
         )
     })
