@@ -34,6 +34,8 @@ regex = "1.11.1"
 base64 = "0.22.1"
 futures = "0.3.31"
 borsh = "1.5.3"
+near-jsonrpc-primitives = "0.29.1"
+near-primitives = "0.28.0"
 
 [features]
 default = ["workspaces"]

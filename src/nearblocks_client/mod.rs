@@ -90,6 +90,38 @@ impl ApiClient {
         }
     }
 
+    // 692tHFoeCUDWs9PSdvrb3FiZEHvso6pzrjgy8VK8RVVG
+    // curl 'https://api.nearblocks.io/v1/search/receipts?keyword=692tHFoeCUDWs9PSdvrb3FiZEHvso6pzrjgy8VK8RVVG'
+    pub async fn get_receipt_by_id(&self, receipt_id: &str) -> anyhow::Result<ApiResponse> {
+        let endpoint = format!("v1/search/receipts?keyword={}", receipt_id);
+        let url = self.base_url.clone() + &endpoint;
+
+        println!("Fetching receipt from {}", url);
+        let response = self
+            .client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .send()
+            .await?;
+
+        let response_text = response.text().await?;
+
+        match serde_json::from_str::<ApiResponse>(&response_text) {
+            Ok(api_response) => {
+                println!(
+                    "Successfully fetched {} transactions",
+                    api_response.txns.len()
+                );
+                Ok(api_response)
+            }
+            Err(e) => {
+                eprintln!("Failed to parse API response: {}", e);
+                eprintln!("Raw response: {}", response_text);
+                Err(anyhow::anyhow!("Failed to parse API response: {}", e))
+            }
+        }
+    }
+
     fn build_pagination_params(
         &self,
         limit: Option<i32>,

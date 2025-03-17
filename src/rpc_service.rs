@@ -7,6 +7,9 @@ use near_account_id::AccountId;
 use near_api::{types::reference::Reference, types::Data};
 use near_api::{Contract, NetworkConfig, RPCEndpoint};
 use near_jsonrpc_client::methods::query::RpcQueryRequest;
+use near_jsonrpc_client::{methods, JsonRpcClient};
+use near_jsonrpc_primitives::types::transactions::{RpcTransactionResponse, TransactionInfo};
+use near_primitives::views::TxExecutionStatus;
 use rocket::http::Status;
 use rocket::serde::json::json;
 use serde::Deserialize;
@@ -91,6 +94,29 @@ impl RpcService {
             contract: Contract(contract),
         }
     }
+
+    // pub async fn get_transaction_status(
+    //     &self,
+    //     contract: &str,
+    //     transaction_hash: &str,
+    // ) -> anyhow::Result<RpcTransactionResponse> {
+    //     let mainnet_rpc = self.network.rpc_endpoints[0].clone();
+    //     let client = JsonRpcClient::connect(mainnet_rpc.url.as_ref());
+
+    //     let tx_status_request = methods::tx::RpcTransactionStatusRequest {
+    //         transaction_info: TransactionInfo::TransactionId {
+    //             tx_hash: transaction_hash.parse().unwrap(),
+    //             sender_account_id: contract.parse().unwrap(),
+    //         },
+
+    //         wait_until: TxExecutionStatus::Final,
+    //     };
+
+    //     let tx_status = client.call(tx_status_request).await?;
+
+    //     println!("{:?}", tx_status);
+    //     return Ok(tx_status);
+    // }
 
     // devhub contract
     pub async fn get_proposal(
@@ -340,7 +366,7 @@ impl RpcService {
         block_id: i64,
     ) -> anyhow::Result<i64> {
         println!("Attempting to get last proposal ID at block {}", block_id);
-        println!("Using contract: {}", self.contract.0);
+        println!("Using contract: {}", contract.0);
         self.get_last_proposal_id(contract, Some(block_id)).await
     }
 }

@@ -98,6 +98,14 @@ pub async fn handle_add_proposal(
       https://github.com/near-daos/sputnik-dao-contract/blob/3d568f9517a8c7a6510786d978bb25b180501841/sputnikdao2/src/proposals.rs#L532
     */
 
+    // println!("Transaction: {:?}", transaction);
+
+    // let nearblocks_client = nearblocks_client::ApiClient::new();
+    // let receipt = nearblocks_client
+    //     .get_receipt_by_id(&transaction.receipt_id)
+    //     .await?;
+    // println!("Receipt: {:?}", receipt);
+
     let proposal_id = match rpc_service
         .get_last_proposal_id_on_block(
             Contract(contract.clone()),
@@ -120,7 +128,10 @@ pub async fn handle_add_proposal(
                     timestamp: chrono::Utc::now(),
                 })
                 .await;
-            return Err(anyhow::anyhow!("fatal: Failed to get last proposal ID"));
+            // TODO: this is blocking we could get the last proposal id from the database (but reindexing would need to remove all proposals from db inorder for that to work. Or we get the last proposal id on a block or we get the receipt outcome.)
+            return Err(anyhow::anyhow!(
+                "non-fatal: Failed to get last proposal ID in add_proposal"
+            ));
         }
     };
 
@@ -349,7 +360,11 @@ pub async fn handle_act_proposal(
                     timestamp: chrono::Utc::now(),
                 })
                 .await;
-            return Err(anyhow::anyhow!("Failed to get proposal from RPC"));
+            // TODO: this is blocking the PR sometimes we get this error
+            //
+            return Err(anyhow::anyhow!(
+                "non-fatal: Failed to get proposal from RPC in handle_act_proposal"
+            ));
         }
     };
 

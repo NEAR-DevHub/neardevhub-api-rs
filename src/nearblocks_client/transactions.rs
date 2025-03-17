@@ -9,7 +9,6 @@ use near_account_id::AccountId;
 use rocket::{http::Status, State};
 
 pub async fn fetch_all_new_transactions(
-    nearblocks_client: &nearblocks_client::ApiClient,
     after_block: Option<i64>,
     passed_contract: Option<AccountId>,
 ) -> anyhow::Result<(Vec<Transaction>, String)> {
@@ -24,7 +23,7 @@ pub async fn fetch_all_new_transactions(
         Some(c) => c,
         None => env_contract,
     };
-
+    let nearblocks_client = nearblocks_client::ApiClient::new();
     loop {
         let response = match nearblocks_client
             .get_account_txns_by_pagination(
@@ -76,10 +75,8 @@ pub async fn update_nearblocks_data(
     rpc_service: &State<RpcService>,
     after_block: Option<i64>,
 ) -> anyhow::Result<()> {
-    let nearblocks_client = nearblocks_client::ApiClient::new();
-
     let (all_transactions, current_cursor) =
-        match fetch_all_new_transactions(&nearblocks_client, after_block, None).await {
+        match fetch_all_new_transactions(after_block, None).await {
             Ok(result) => result,
             Err(e) => {
                 eprintln!("Error fetching transactions: {:?}", e);
@@ -116,16 +113,13 @@ pub async fn update_dao_nearblocks_data(
     rpc_service: &RpcService,
     after_block: Option<i64>,
 ) -> anyhow::Result<()> {
-    let nearblocks_client = nearblocks_client::ApiClient::new();
     println!(
         "Fetching all new transactions for contract: {} starting from block: {}",
         contract,
         after_block.unwrap_or(0)
     );
     let (all_transactions, _) =
-        match fetch_all_new_transactions(&nearblocks_client, after_block, Some(contract.clone()))
-            .await
-        {
+        match fetch_all_new_transactions(after_block, Some(contract.clone())).await {
             Ok(result) => result,
             Err(e) => {
                 eprintln!("Error fetching transactions: {:?}", e);
@@ -284,8 +278,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_fetch_all_transactions() {
-        let client = nearblocks_client::ApiClient::new();
-        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0), None)
+        let (transactions, current_cursor) = fetch_all_new_transactions(Some(0), None)
             .await
             .expect("Error fetching transactions");
 
