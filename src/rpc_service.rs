@@ -7,9 +7,6 @@ use near_account_id::AccountId;
 use near_api::{types::reference::Reference, types::Data};
 use near_api::{Contract, NetworkConfig, RPCEndpoint};
 use near_jsonrpc_client::methods::query::RpcQueryRequest;
-use near_jsonrpc_client::{methods, JsonRpcClient};
-use near_jsonrpc_primitives::types::transactions::{RpcTransactionResponse, TransactionInfo};
-use near_primitives::views::TxExecutionStatus;
 use rocket::http::Status;
 use rocket::serde::json::json;
 use serde::Deserialize;
@@ -73,6 +70,12 @@ impl RpcService {
 
         let mut network = NetworkConfig::mainnet();
 
+        let archival_endpoint =
+            RPCEndpoint::new("https://archival-rpc.mainnet.fastnear.com".parse().unwrap())
+                .with_api_key(env.fastnear_api_key.parse().unwrap())
+                .with_retries(3)
+                .with_exponential_backoff(true, 2);
+
         let custom_endpoint =
             RPCEndpoint::new("https://rpc.mainnet.fastnear.com/".parse().unwrap())
                 .with_api_key(env.fastnear_api_key.parse().unwrap())
@@ -80,7 +83,11 @@ impl RpcService {
                 .with_exponential_backoff(true, 2);
 
         // Use fastnear first before the archival RPC with super low rate limit
-        network.rpc_endpoints = vec![custom_endpoint, RPCEndpoint::mainnet().with_retries(3)];
+        network.rpc_endpoints = vec![
+            archival_endpoint,
+            custom_endpoint,
+            RPCEndpoint::mainnet().with_retries(3),
+        ];
 
         Self {
             network,

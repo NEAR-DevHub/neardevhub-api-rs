@@ -138,12 +138,7 @@ pub async fn update_dao_nearblocks_data(
 fn is_fatal_error(error: &anyhow::Error) -> bool {
     let error_msg = error.to_string();
 
-    // List of non-fatal error messages
-    let non_fatal_errors = [
-        "non-fatal",
-        // "Failed to get proposal from RPC",
-        // Add more non-fatal error messages here
-    ];
+    let non_fatal_errors = ["non-fatal"];
 
     !non_fatal_errors.iter().any(|&msg| error_msg.contains(msg))
 }

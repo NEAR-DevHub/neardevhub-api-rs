@@ -128,9 +128,8 @@ pub async fn handle_add_proposal(
                     timestamp: chrono::Utc::now(),
                 })
                 .await;
-            // TODO: this is blocking we could get the last proposal id from the database (but reindexing would need to remove all proposals from db inorder for that to work. Or we get the last proposal id on a block or we get the receipt outcome.)
             return Err(anyhow::anyhow!(
-                "non-fatal: Failed to get last proposal ID in add_proposal"
+                "fatal: Failed to get last proposal ID in add_proposal"
             ));
         }
     };
@@ -363,7 +362,7 @@ pub async fn handle_act_proposal(
             // TODO: this is blocking the PR sometimes we get this error
             //
             return Err(anyhow::anyhow!(
-                "non-fatal: Failed to get proposal from RPC in handle_act_proposal"
+                "fatal: Failed to get proposal from RPC in handle_act_proposal"
             ));
         }
     };

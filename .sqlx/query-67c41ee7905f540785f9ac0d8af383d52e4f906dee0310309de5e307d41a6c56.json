@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT *\n            FROM dao_proposals\n            WHERE hash = $1\n            ORDER BY submission_time DESC\n            LIMIT 1\n            ",
+  "query": "\n            SELECT *\n            FROM dao_proposals\n            WHERE hash = $1\n            AND dao_instance = $2\n            ORDER BY submission_time DESC\n            LIMIT 1\n            ",
   "describe": {
     "columns": [
       {
@@ -96,6 +96,7 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Text"
       ]
     },
@@ -120,5 +121,5 @@
       true
     ]
   },
-  "hash": "3ddb3d2ae4005d010ca93ae744fcb3d983ee773d5519e5ed25cd1b0dae9d4bd8"
+  "hash": "67c41ee7905f540785f9ac0d8af383d52e4f906dee0310309de5e307d41a6c56"
 }
