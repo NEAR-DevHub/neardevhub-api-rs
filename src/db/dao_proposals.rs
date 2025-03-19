@@ -74,42 +74,6 @@ impl DB {
         tx: &mut Transaction<'static, Postgres>,
         sputnik_proposal: SputnikProposalSnapshotRecord,
     ) -> anyhow::Result<()> {
-        let kind = match serde_json::to_value(sputnik_proposal.kind) {
-            Ok(value) => value,
-            Err(e) => {
-                eprintln!("Error converting kind to JSON: {:?}", e);
-                return Err(e.into());
-            }
-        };
-
-        let vote_counts = match serde_json::to_value(sputnik_proposal.vote_counts) {
-            Ok(value) => value,
-            Err(e) => {
-                eprintln!("Error converting vote_counts to JSON: {:?}", e);
-                return Err(e.into());
-            }
-        };
-
-        let votes = match serde_json::to_value(&sputnik_proposal.votes) {
-            Ok(value) => value,
-            Err(e) => {
-                eprintln!("Error converting votes to JSON: {:?}", e);
-                return Err(e.into());
-            }
-        };
-
-        // Determine the kind_key based on the type of kind
-        let kind = match kind {
-            serde_json::Value::Object(obj) => {
-                serde_json::Value::String(obj.keys().next().unwrap().to_string())
-            }
-            serde_json::Value::String(s) => serde_json::Value::String(s.clone()),
-            _ => {
-                eprintln!("Unexpected kind type: {:?}", kind);
-                serde_json::Value::String("Error".to_string())
-            }
-        };
-
         let update_result = sqlx::query!(
             r#"
             UPDATE dao_proposals SET
@@ -137,12 +101,12 @@ impl DB {
             sputnik_proposal.id,
             sputnik_proposal.proposal_id as i32,
             sputnik_proposal.description,
-            kind,
+            sputnik_proposal.kind,
             sputnik_proposal.proposer,
             sputnik_proposal.status,
             sputnik_proposal.submission_time,
-            vote_counts,
-            votes,
+            sputnik_proposal.vote_counts,
+            sputnik_proposal.votes,
             sputnik_proposal.total_votes as i32,
             sputnik_proposal.dao_instance,
             sputnik_proposal.proposal_action,
@@ -174,12 +138,12 @@ impl DB {
                 sputnik_proposal.description,
                 sputnik_proposal.id,
                 sputnik_proposal.proposal_id as i32,
-                kind,
+                sputnik_proposal.kind,
                 sputnik_proposal.proposer,
                 sputnik_proposal.status,
                 sputnik_proposal.submission_time,
-                vote_counts,
-                votes,
+                sputnik_proposal.vote_counts,
+                sputnik_proposal.votes,
                 sputnik_proposal.total_votes as i32,
                 sputnik_proposal.dao_instance,
                 sputnik_proposal.proposal_action,
@@ -241,7 +205,7 @@ impl DB {
           SELECT *
           FROM dao_proposals
           WHERE dao_instance = $1
-          AND ($2 IS NULL OR kind::text = $2)
+          AND ($2 IS NULL OR kind::text = ILIKE '%' || $2 || '%')
           AND ($3 IS NULL OR status::text = $3)
           AND ($4 IS NULL OR total_votes = $4)
           AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')

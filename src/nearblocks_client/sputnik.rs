@@ -200,7 +200,7 @@ pub async fn handle_add_proposal(
     let token_id = get_token_id(&daop.proposal.kind);
     let token_amount = get_token_amount(&daop.proposal.kind);
 
-    let kind = serde_json::to_value(daop.proposal.kind).unwrap_or_else(|e| {
+    let kind = serde_json::to_value(&daop.proposal.kind).unwrap_or_else(|e| {
         eprintln!("fatal: Failed to serialize proposal kind: {:?}", e);
         serde_json::Value::Null
     });
