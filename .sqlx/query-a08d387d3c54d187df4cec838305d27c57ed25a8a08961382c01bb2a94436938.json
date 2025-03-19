@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n          SELECT approver\n          FROM dao_approvers\n          WHERE dao_instance = $1\n          ORDER BY approver\n          ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "approver",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a08d387d3c54d187df4cec838305d27c57ed25a8a08961382c01bb2a94436938"
+}

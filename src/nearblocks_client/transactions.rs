@@ -2,22 +2,28 @@ use crate::db::DB;
 use crate::nearblocks_client;
 use crate::nearblocks_client::proposal::{handle_edit_proposal, handle_set_block_height_callback};
 use crate::nearblocks_client::rfp::{handle_edit_rfp, handle_set_rfp_block_height_callback};
+use crate::nearblocks_client::sputnik::{handle_act_proposal, handle_add_proposal};
 use crate::nearblocks_client::types::Transaction;
 use crate::rpc_service::{Env, RpcService};
 use near_account_id::AccountId;
 use rocket::{http::Status, State};
 
 pub async fn fetch_all_new_transactions(
-    nearblocks_client: &nearblocks_client::ApiClient,
     after_block: Option<i64>,
+    passed_contract: Option<AccountId>,
 ) -> anyhow::Result<(Vec<Transaction>, String)> {
     let mut all_transactions = Vec::new();
     let mut current_cursor = "".to_string();
 
     dotenvy::dotenv().ok();
     let env: Env = envy::from_env::<Env>().expect("Failed to load environment variables");
-    let contract: AccountId = env.contract.parse().expect("Failed to parse contract");
+    let env_contract: AccountId = env.contract.parse().expect("Failed to parse contract");
 
+    let contract = match passed_contract {
+        Some(c) => c,
+        None => env_contract,
+    };
+    let nearblocks_client = nearblocks_client::ApiClient::new();
     loop {
         let response = match nearblocks_client
             .get_account_txns_by_pagination(
@@ -42,7 +48,6 @@ pub async fn fetch_all_new_transactions(
             response.txns.len()
         );
 
-        // Check if we've wrapped around or reached the end
         if response.cursor.is_none() {
             println!("Cursor has wrapped around, finished fetching transactions");
             all_transactions.extend(response.txns);
@@ -70,10 +75,8 @@ pub async fn update_nearblocks_data(
     rpc_service: &State<RpcService>,
     after_block: Option<i64>,
 ) -> anyhow::Result<()> {
-    let nearblocks_client = nearblocks_client::ApiClient::new();
-
     let (all_transactions, current_cursor) =
-        match fetch_all_new_transactions(&nearblocks_client, after_block).await {
+        match fetch_all_new_transactions(after_block, None).await {
             Ok(result) => result,
             Err(e) => {
                 eprintln!("Error fetching transactions: {:?}", e);
@@ -101,6 +104,89 @@ pub async fn update_nearblocks_data(
             .await;
     }
 
+    Ok(())
+}
+
+pub async fn update_dao_nearblocks_data(
+    db: &DB,
+    contract: &AccountId,
+    rpc_service: &RpcService,
+    after_block: Option<i64>,
+) -> anyhow::Result<()> {
+    println!(
+        "Fetching all new transactions for contract: {} starting from block: {}",
+        contract,
+        after_block.unwrap_or(0)
+    );
+    let (all_transactions, _) =
+        match fetch_all_new_transactions(after_block, Some(contract.clone())).await {
+            Ok(result) => result,
+            Err(e) => {
+                eprintln!("Error fetching transactions: {:?}", e);
+                return Err(anyhow::anyhow!("Error fetching transactions: {:?}", e));
+            }
+        };
+
+    println!("Total transactions fetched: {}", all_transactions.len());
+
+    // Process transactions and get the last successful block height
+    process_dao_transactions(&all_transactions, db.into(), contract, rpc_service).await?;
+
+    Ok(())
+}
+
+fn is_fatal_error(error: &anyhow::Error) -> bool {
+    let error_msg = error.to_string();
+
+    let non_fatal_errors = ["non-fatal"];
+
+    !non_fatal_errors.iter().any(|&msg| error_msg.contains(msg))
+}
+
+pub async fn process_dao_transactions(
+    transactions: &[Transaction],
+    db: &State<DB>,
+    contract: &AccountId,
+    rpc_service: &RpcService,
+) -> anyhow::Result<()> {
+    for transaction in transactions.iter() {
+        if let Some(action) = transaction
+            .actions
+            .as_ref()
+            .and_then(|actions| actions.first())
+        {
+            if !transaction.receipt_outcome.status {
+                eprintln!(
+                    "Proposal receipt outcome status is {:?} with block hash: {}",
+                    transaction.receipt_outcome.status, transaction.receipt_block.block_hash
+                );
+                continue;
+            }
+
+            // Process the transaction and propagate any errors
+            let result = match action.method.as_deref().unwrap_or("") {
+                "add_proposal" => {
+                    handle_add_proposal(transaction.to_owned(), db, contract, rpc_service).await
+                }
+                "act_proposal" => {
+                    handle_act_proposal(transaction.to_owned(), db, contract, rpc_service).await
+                }
+                _ => {
+                    continue;
+                }
+            };
+
+            if let Err(e) = result {
+                if is_fatal_error(&e) {
+                    eprintln!("Fatal error, stopping: {:?}", e);
+                    return Ok(());
+                } else {
+                    eprintln!("Non-fatal error, continuing: {:?}", e);
+                    continue;
+                }
+            }
+        }
+    }
     Ok(())
 }
 
@@ -187,8 +273,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_fetch_all_transactions() {
-        let client = nearblocks_client::ApiClient::new();
-        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0))
+        let (transactions, current_cursor) = fetch_all_new_transactions(Some(0), None)
             .await
             .expect("Error fetching transactions");
 
@@ -222,6 +307,8 @@ mod tests {
             duplicates.join("\n")
         );
 
+        // Remove strict cursor assertion since it can vary
         println!("Total transactions found: {}", transactions.len());
+        println!("Final cursor: {}", current_cursor);
     }
 }

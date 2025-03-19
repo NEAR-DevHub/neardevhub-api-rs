@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT DISTINCT receiver_id\n            FROM dao_proposals\n            WHERE \n                dao_instance = $1\n                AND receiver_id IS NOT NULL\n                AND receiver_id != ''\n            ORDER BY receiver_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "receiver_id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "9784fd0aea15fec224e6d5815dc70bfcb2f72e5ad12b067678ba70bc322acb73"
+}

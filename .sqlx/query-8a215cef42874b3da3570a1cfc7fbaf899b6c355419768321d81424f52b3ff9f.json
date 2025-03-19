@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT DISTINCT token_id\n            FROM dao_proposals\n            WHERE dao_instance = $1\n            AND token_id IS NOT NULL\n            AND token_id != ''\n            ORDER BY token_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "token_id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "8a215cef42874b3da3570a1cfc7fbaf899b6c355419768321d81424f52b3ff9f"
+}
