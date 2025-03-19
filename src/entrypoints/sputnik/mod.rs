@@ -15,6 +15,12 @@ pub mod sputnik_types;
 
 #[derive(Clone, Debug, FromForm, ToSchema)]
 pub struct GetDaoProposalsFilters {
+    pub from_amount: Option<i64>,
+    pub to_amount: Option<i64>,
+    pub recipient_id: Option<String>,
+    pub requested_token_id: Option<Vec<String>>,
+    pub approvers: Option<Vec<String>>,
+    // Old filters
     pub proposer: Option<String>,
     pub kind: Option<String>,
     pub total_votes: Option<i64>,

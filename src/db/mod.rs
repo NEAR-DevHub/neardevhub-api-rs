@@ -1109,18 +1109,34 @@ impl DB {
         let total_votes = filters.as_ref().and_then(|f| f.total_votes.as_ref());
         let status = filters.as_ref().and_then(|f| f.status.as_ref());
         let proposer = filters.as_ref().and_then(|f| f.proposer.as_ref());
+        let from_amount = filters.as_ref().and_then(|f| f.from_amount.as_ref());
+        let to_amount = filters.as_ref().and_then(|f| f.to_amount.as_ref());
+        let recipient_id = filters.as_ref().and_then(|f| f.recipient_id.as_ref());
+        let requested_token_ids = filters.as_ref().and_then(|f| f.requested_token_id.as_ref());
+        let approvers = filters.as_ref().and_then(|f| f.approvers.as_ref());
 
         let sql = format!(
             r#"
           SELECT *
           FROM dao_proposals
           WHERE dao_instance = $1
-          AND ($2 IS NULL OR kind::text ILIKE '%' || $2 || '%')
-          AND ($3 IS NULL OR status::text ILIKE '%' || $3 || '%')
+          AND ($2 IS NULL OR kind::text = $2)
+          AND ($3 IS NULL OR status::text = $3)
           AND ($4 IS NULL OR total_votes = $4)
           AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
+          AND ($6 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric >= $6::numeric ELSE false END)
+          AND ($7 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric <= $7::numeric ELSE false END)
+          AND ($8 IS NULL OR receiver_id::text ILIKE '%' || $8 || '%')
+          AND ($9 IS NULL OR token_id::text = ANY($9))
+          AND ($10 IS NULL OR (
+              SELECT EXISTS (
+                  SELECT 1
+                  FROM jsonb_object_keys(votes::jsonb) AS voter
+                  WHERE voter = ANY($10)
+              )
+          ))
           ORDER BY {}
-          LIMIT $6 OFFSET $7
+          LIMIT $11 OFFSET $12
         "#,
             order_clause,
         );
@@ -1131,6 +1147,11 @@ impl DB {
             .bind(status)
             .bind(total_votes)
             .bind(proposer)
+            .bind(from_amount)
+            .bind(to_amount)
+            .bind(recipient_id)
+            .bind(requested_token_ids)
+            .bind(approvers)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.0)
@@ -1140,10 +1161,21 @@ impl DB {
             SELECT COUNT(*)
             FROM dao_proposals
             WHERE dao_instance = $1
-            AND ($2 IS NULL OR kind::text ILIKE '%' || $2 || '%')
-            AND ($3 IS NULL OR status::text ILIKE '%' || $3 || '%')
+            AND ($2 IS NULL OR kind::text = $2)
+            AND ($3 IS NULL OR status::text = $3)
             AND ($4 IS NULL OR total_votes = $4)
-            AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
+            AND ($5 IS NULL OR proposer::text = $5)
+            AND ($6 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric >= $6::numeric ELSE false END)
+            AND ($7 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric <= $7::numeric ELSE false END)
+            AND ($8 IS NULL OR receiver_id::text = $8)
+            AND ($9 IS NULL OR token_id::text = ANY($9))
+            AND ($10 IS NULL OR (
+              SELECT EXISTS (
+                  SELECT 1
+                  FROM jsonb_object_keys(votes::jsonb) AS voter
+                  WHERE voter = ANY($10)
+              )
+          ))
         "#;
 
         let total_count = sqlx::query_scalar::<_, i64>(count_sql)
@@ -1152,6 +1184,11 @@ impl DB {
             .bind(status)
             .bind(total_votes)
             .bind(proposer)
+            .bind(from_amount)
+            .bind(to_amount)
+            .bind(recipient_id)
+            .bind(requested_token_ids)
+            .bind(approvers)
             .fetch_one(&self.0)
             .await?;
 

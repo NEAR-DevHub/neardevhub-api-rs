@@ -299,7 +299,7 @@ fn get_token_amount(kind: &ProposalKind) -> Option<String> {
 fn get_token_id(kind: &ProposalKind) -> Option<String> {
     match kind {
         ProposalKind::Transfer { token_id, .. } => Some(token_id.to_string()),
-        _ => None,
+        _ => Some("near".to_string()),
     }
 }
 
