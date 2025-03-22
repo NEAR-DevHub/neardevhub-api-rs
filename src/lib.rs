@@ -102,9 +102,9 @@ pub fn rocket(rpc_service: Option<RpcService>) -> rocket::Rocket<rocket::Build> 
         "https://devhub.near.page",
         "https://events-committee.near.page/",
         "https://infrastructure-committee.near.page/",
-        "https://devhub-cache-api-rs.fly.dev",
-        "https://infra-cache-api-rs.fly.dev",
-        "https://events-cache-api-rs.fly.dev",
+        "https://devhub-cache-api-rs-2.fly.dev",
+        "https://infra-cache-api-rs-2.fly.dev",
+        "https://events-cache-api-rs-2.fly.dev",
         // TODO Add prod urls here
     ]);
     let allowed_origins = Origins {

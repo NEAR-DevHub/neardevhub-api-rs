@@ -24,7 +24,7 @@ const fetch_from_pagoda = async () => {
 
 const fetch_from_cache = async () => {
   const response = await fetch(
-    `https://devhub-cache-api-rs.fly.dev/proposals?limit=${LIMIT}&offset=${OFFSET}`,
+    `https://devhub-cache-api-rs-2.fly.dev/proposals?limit=${LIMIT}&offset=${OFFSET}`,
     {
       method: "GET",
       headers: { "Content-Type": "application/json" },

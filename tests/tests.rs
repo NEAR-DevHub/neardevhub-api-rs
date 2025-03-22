@@ -12,7 +12,6 @@ use devhub_cache_api::{
     timestamp_to_date_string, types::PaginatedResponse,
 };
 use futures::StreamExt;
-use near_sdk::AccountId;
 use serde_json::Value;
 
 mod test_env;
@@ -25,6 +24,7 @@ pub struct Env {
     pub fastnear_api_key: String,
 }
 
+// TODO
 #[rocket::async_test]
 async fn test_proposal_ids_continuous_name_status_matches() {
     use rocket::local::asynchronous::Client;
@@ -234,15 +234,15 @@ async fn test_all_proposals_are_indexed() {
     let mut map = HashMap::new();
     map.insert(
         "devhub.near",
-        "https://devhub-cache-api-rs.fly.dev/proposals",
+        "https://devhub-cache-api-rs-2.fly.dev/proposals",
     );
     map.insert(
         "infrastructure-committee.near",
-        "https://infra-cache-api-rs.fly.dev/proposals",
+        "https://infra-cache-api-rs-2.fly.dev/proposals",
     );
     map.insert(
         "events-committee.near",
-        "https://events-cache-api-rs.fly.dev/proposals",
+        "https://events-cache-api-rs-2.fly.dev/proposals",
     );
 
     for contract_string in contract_strings {
@@ -445,6 +445,9 @@ fn test_custom_error_handler() {
 async fn test_route_test() {
     use rocket::local::asynchronous::Client;
 
+    dotenvy::dotenv().ok();
+    let contract = std::env::var("CONTRACT").unwrap();
+
     let client = Client::tracked(devhub_cache_api::rocket(None))
         .await
         .expect("valid Rocket instance");
@@ -453,6 +456,6 @@ async fn test_route_test() {
     let response = client.get("/test").dispatch().await;
     assert_eq!(
         response.into_string().await.unwrap(),
-        "Welcome to devhub.near"
+        format!("Welcome to {}", contract)
     );
 }
