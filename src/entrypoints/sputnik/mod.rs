@@ -167,7 +167,21 @@ async fn get_block_info(account_id: &str, db: &State<DB>) -> Result<Json<LastUpd
 
 #[get("/admin/<account_id>/reset")]
 async fn reset_dao_proposals(account_id: &str, db: &State<DB>) -> Result<(), Status> {
-    db.remove_all_dao_proposals(account_id).await.unwrap();
+    match db.remove_all_dao_proposals(account_id).await {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!("Error removing all dao proposals: {:?}", e);
+        }
+    }
+    match db
+        .set_last_updated_info_for_contract(&AccountId::from_str(account_id).unwrap(), 0, 0)
+        .await
+    {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!("Error updating block: {:?}", e);
+        }
+    }
     Ok(())
 }
 

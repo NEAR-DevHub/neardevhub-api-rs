@@ -438,6 +438,16 @@ pub async fn handle_act_proposal(
         anyhow::anyhow!("Failed to insert transactions")
     })?;
 
+    DB::set_after_block(&mut tx, contract, transaction.block.block_height)
+        .await
+        .map_err(|e| {
+            eprintln!(
+                "fatal: Failed to set last updated info for contract: {:?}",
+                e
+            );
+            anyhow::anyhow!("fatal: Failed to set last updated info for contract")
+        })?;
+
     tx.commit().await.map_err(|e| {
         eprintln!("Failed to commit transaction: {:?}", e);
         anyhow::anyhow!("Failed to commit transaction")

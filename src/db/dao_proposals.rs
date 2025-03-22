@@ -205,7 +205,7 @@ impl DB {
           SELECT *
           FROM dao_proposals
           WHERE dao_instance = $1
-          AND ($2 IS NULL OR kind::text = ILIKE '%' || $2 || '%')
+          AND ($2 IS NULL OR substring(kind::text, 1, 40) ILIKE '%' || $2 || '%')
           AND ($3 IS NULL OR status::text = $3)
           AND ($4 IS NULL OR total_votes = $4)
           AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
@@ -246,13 +246,13 @@ impl DB {
             SELECT COUNT(*)
             FROM dao_proposals
             WHERE dao_instance = $1
-            AND ($2 IS NULL OR kind::text = $2)
+            AND ($2 IS NULL OR substring(kind::text, 1, 40) ILIKE '%' || $2 || '%')
             AND ($3 IS NULL OR status::text = $3)
             AND ($4 IS NULL OR total_votes = $4)
-            AND ($5 IS NULL OR proposer::text = $5)
+            AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
             AND ($6 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric >= $6::numeric ELSE false END)
             AND ($7 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric <= $7::numeric ELSE false END)
-            AND ($8 IS NULL OR receiver_id::text = $8)
+            AND ($8 IS NULL OR receiver_id::text ILIKE '%' || $8 || '%')
             AND ($9 IS NULL OR token_id::text = ANY($9))
             AND ($10 IS NULL OR (
               SELECT EXISTS (
