@@ -1,10 +1,12 @@
-# fly.toml app configuration file generated for devhub-cache-api-rs on 2024-11-09T09:10:37+07:00
+# fly.toml app configuration file generated for devhub-cache-api-rs-2 on 2025-03-20T10:30:36-05:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
-
-app = 'devhub-cache-api-rs'
+# org: devhub-128
+app = 'devhub-cache-api-rs-2'
 primary_region = 'ams'
+
+[build]
 
 [env]
 CONTRACT = 'devhub.near'

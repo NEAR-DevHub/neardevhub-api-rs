@@ -72,7 +72,6 @@ impl ApiClient {
         }
 
         let response_text = response.text().await?;
-        println!("Response body: {}", response_text);
 
         match serde_json::from_str::<ApiResponse>(&response_text) {
             Ok(api_response) => {

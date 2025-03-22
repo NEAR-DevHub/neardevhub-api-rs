@@ -6,7 +6,7 @@ use futures::future::join_all;
 use devhub_cache_api::db::db_types::LastUpdatedInfo;
 use devhub_cache_api::entrypoints::proposal::proposal_types::ProposalBodyFields;
 use devhub_cache_api::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
-use devhub_cache_api::rpc_service::{self, ChangeLogType, RpcService};
+use devhub_cache_api::rpc_service::{ChangeLogType, RpcService};
 use devhub_cache_api::{
     db::db_types::ProposalWithLatestSnapshotView, separate_number_and_text,
     timestamp_to_date_string, types::PaginatedResponse,
@@ -64,7 +64,7 @@ async fn test_proposal_ids_continuous_name_status_matches() {
     let rpc_service = RpcService::new();
 
     // Create a Vec of futures for all blockchain calls
-    let futures = result.records.iter().enumerate().map(|(_ndx, record)| {
+    let futures = result.records.iter().map(|record| {
         let proposal_id = record.proposal_id;
         let rpc_service = rpc_service.clone();
         let record = record.clone();
@@ -122,7 +122,7 @@ async fn test_if_the_last_ten_changed_will_get_indexed() -> Result<(), Box<dyn s
 
     let contract_string: String =
         std::env::var("CONTRACT").unwrap_or_else(|_| "devhub.near".to_string());
-    let contract_account_id: AccountId = contract_string.parse().unwrap();
+    // let contract_account_id: AccountId = contract_string.parse().unwrap();
 
     // Get changelog from the RPC service
     let rpc_service = RpcService::new();

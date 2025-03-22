@@ -77,15 +77,23 @@ impl RpcService {
 
         let mut network = NetworkConfig::mainnet();
 
+        let archival_endpoint =
+            RPCEndpoint::new("https://archival-rpc.mainnet.fastnear.com".parse().unwrap())
+                .with_api_key(env.fastnear_api_key.parse().unwrap())
+                .with_retries(3)
+                .with_exponential_backoff(true, 2);
+
         let custom_endpoint =
             RPCEndpoint::new("https://rpc.mainnet.fastnear.com/".parse().unwrap())
-                .with_api_key(env.fastnear_api_key.parse().unwrap());
+                .with_api_key(env.fastnear_api_key.parse().unwrap())
+                .with_retries(5)
+                .with_exponential_backoff(true, 3);
 
         // Use fastnear first before the archival RPC with super low rate limit
         network.rpc_endpoints = vec![
+            archival_endpoint,
             custom_endpoint,
-            // RPCEndpoint::new("https://near.lava.build".parse().unwrap()),
-            RPCEndpoint::mainnet(),
+            RPCEndpoint::mainnet().with_retries(3),
         ];
 
         Self {

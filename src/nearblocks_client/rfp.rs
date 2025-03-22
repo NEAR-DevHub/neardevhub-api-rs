@@ -4,23 +4,26 @@ use crate::nearblocks_client::types::Transaction;
 use crate::rpc_service::RpcService;
 use crate::{db::db_types::RfpSnapshotRecord, nearblocks_client::types::BLOCK_HEIGHT_OFFSET};
 use devhub_shared::rfp::VersionedRFP;
-use rocket::{http::Status, State};
+use rocket::State;
 
 pub async fn handle_set_rfp_block_height_callback(
     transaction: Transaction,
     db: &State<DB>,
     rpc_service: &State<RpcService>,
-) -> Result<(), Status> {
+) -> anyhow::Result<()> {
     let action = transaction
         .actions
         .as_ref()
         .and_then(|actions| actions.first())
-        .ok_or(Status::InternalServerError)?;
+        .ok_or(anyhow::anyhow!("No actions found in transaction"))?;
     let json_args = action.args.clone().unwrap_or_default();
 
     let args: SetRfpBlockHeightCallbackArgs = serde_json::from_str(&json_args).unwrap();
 
-    let mut tx = db.begin().await.map_err(|_e| Status::InternalServerError)?;
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(|_e| anyhow::anyhow!("Failed to begin transaction"))?;
     DB::upsert_rfp(
         &mut tx,
         args.clone().rfp.id,
@@ -51,9 +54,16 @@ pub async fn handle_set_rfp_block_height_callback(
 
     DB::insert_rfp_snapshot(&mut tx, &snapshot).await.unwrap();
 
+    DB::set_last_updated_block_on_tx(&mut tx, transaction.block.block_height)
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to set last updated block: {:?}", e);
+            anyhow::anyhow!("Failed to set last updated block")
+        })?;
+
     tx.commit()
         .await
-        .map_err(|_e| Status::InternalServerError)?;
+        .map_err(|_e| anyhow::anyhow!("Failed to commit transaction"))?;
 
     Ok(())
 }
@@ -78,10 +88,10 @@ pub async fn handle_edit_rfp(
     transaction: Transaction,
     db: &State<DB>,
     rpc_service: &State<RpcService>,
-) -> Result<(), Status> {
+) -> anyhow::Result<()> {
     let id = get_rfp_id(&transaction).map_err(|e| {
         eprintln!("Failed to get RFP ID: {}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to get RFP ID")
     })?;
     println!("Updating rfp {}", id);
     let versioned_rfp = match rpc_service
@@ -94,11 +104,14 @@ pub async fn handle_edit_rfp(
         Ok(rfp) => rfp,
         Err(e) => {
             eprintln!("Failed to get rfp from RPC: {:?}", e);
-            return Err(Status::InternalServerError);
+            return Err(anyhow::anyhow!("Failed to get RFP from RPC"));
         }
     };
 
-    let mut tx = db.begin().await.map_err(|_e| Status::InternalServerError)?;
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(|_e| anyhow::anyhow!("Failed to begin transaction"))?;
 
     let contract_rfp: ContractRFP = versioned_rfp.clone().into();
     println!(
@@ -114,11 +127,18 @@ pub async fn handle_edit_rfp(
 
     DB::insert_rfp_snapshot(&mut tx, &snapshot)
         .await
-        .map_err(|_e| Status::InternalServerError)?;
+        .map_err(|_e| anyhow::anyhow!("Failed to insert RFP snapshot"))?;
+
+    DB::set_last_updated_block_on_tx(&mut tx, transaction.block.block_height)
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to set last updated block: {:?}", e);
+            anyhow::anyhow!("Failed to set last updated block")
+        })?;
 
     tx.commit()
         .await
-        .map_err(|_e| Status::InternalServerError)?;
+        .map_err(|_e| anyhow::anyhow!("Failed to commit transaction"))?;
 
     Ok(())
 }
