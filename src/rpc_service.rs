@@ -91,8 +91,8 @@ impl RpcService {
 
         // Use fastnear first before the archival RPC with super low rate limit
         network.rpc_endpoints = vec![
-            custom_endpoint,
             archival_endpoint,
+            custom_endpoint,
             RPCEndpoint::mainnet().with_retries(3),
         ];
 
