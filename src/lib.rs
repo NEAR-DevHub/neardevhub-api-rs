@@ -127,7 +127,7 @@ pub fn rocket(rpc_service: Option<RpcService>) -> rocket::Rocket<rocket::Build> 
     let contract: AccountId = env.contract.parse::<AccountId>().unwrap();
     let nearblocks_api_key = env.nearblocks_api_key;
 
-    let rpc_service = rpc_service.unwrap_or_default();
+    let rpc_service = rpc_service.unwrap_or(RpcService::mainnet(contract.clone()));
 
     rocket::custom(figment)
         .attach(cors)
