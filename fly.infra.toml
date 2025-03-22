@@ -1,24 +1,26 @@
-# fly.toml app configuration file generated for infra-cache-api-rs on 2024-11-08T11:35:59+07:00
+# fly.toml app configuration file generated for infra-cache-api-rs-2 on 2025-03-20T11:02:28-05:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'infra-cache-api-rs'
+app = 'infra-cache-api-rs-2'
 primary_region = 'ams'
 
+[build]
+
 [env]
-CONTRACT = 'infrastructure-committee.near'
-ROCKET_PROFILE = 'release'
+  CONTRACT = 'infrastructure-committee.near'
+  ROCKET_PROFILE = 'release'
 
 [http_service]
-internal_port = 8080
-force_https = true
-auto_stop_machines = 'stop'
-auto_start_machines = true
-min_machines_running = 0
-processes = ['app']
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
 
 [[vm]]
-memory = '1gb'
-cpu_kind = 'shared'
-cpus = 1
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

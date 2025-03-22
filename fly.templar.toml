@@ -1,24 +1,26 @@
-# fly.toml app configuration file generated for templar-cache-api-rs on 2024-11-12T16:52:11-08:00
+# fly.toml app configuration file generated for templar-cache-api-rs-2 on 2025-03-20T12:06:30-05:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'templar-cache-api-rs'
+app = 'templar-cache-api-rs-2'
 primary_region = 'ams'
 
+[build]
+
 [env]
-CONTRACT = 'treasury-templar.near'
-ROCKET_PROFILE = 'release'
+  CONTRACT = 'treasury-templar.near'
+  ROCKET_PROFILE = 'release'
 
 [http_service]
-internal_port = 8080
-force_https = true
-auto_stop_machines = 'stop'
-auto_start_machines = true
-min_machines_running = 0
-processes = ['app']
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
 
 [[vm]]
-memory = '1gb'
-cpu_kind = 'shared'
-cpus = 1
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

@@ -5,11 +5,12 @@ use crate::nearblocks_client::rfp::{handle_edit_rfp, handle_set_rfp_block_height
 use crate::nearblocks_client::types::Transaction;
 use crate::rpc_service::{Env, RpcService};
 use near_account_id::AccountId;
-use rocket::{http::Status, State};
+use rocket::State;
 
 pub async fn fetch_all_new_transactions(
     nearblocks_client: &nearblocks_client::ApiClient,
     after_block: Option<i64>,
+    max_transactions: Option<usize>,
 ) -> anyhow::Result<(Vec<Transaction>, String)> {
     let mut all_transactions = Vec::new();
     let mut current_cursor = "".to_string();
@@ -42,6 +43,13 @@ pub async fn fetch_all_new_transactions(
             response.txns.len()
         );
 
+        if let Some(max_transactions) = max_transactions {
+            if all_transactions.len() >= max_transactions {
+                println!("Reached max transactions, finished fetching transactions");
+                break;
+            }
+        }
+
         // Check if we've wrapped around or reached the end
         if response.cursor.is_none() {
             println!("Cursor has wrapped around, finished fetching transactions");
@@ -69,11 +77,12 @@ pub async fn update_nearblocks_data(
     db: &State<DB>,
     rpc_service: &State<RpcService>,
     after_block: Option<i64>,
+    max_transactions: Option<usize>,
 ) -> anyhow::Result<()> {
     let nearblocks_client = nearblocks_client::ApiClient::new();
 
-    let (all_transactions, current_cursor) =
-        match fetch_all_new_transactions(&nearblocks_client, after_block).await {
+    let (all_transactions, _current_cursor) =
+        match fetch_all_new_transactions(&nearblocks_client, after_block, max_transactions).await {
             Ok(result) => result,
             Err(e) => {
                 eprintln!("Error fetching transactions: {:?}", e);
@@ -83,32 +92,24 @@ pub async fn update_nearblocks_data(
 
     println!("Total transactions fetched: {}", all_transactions.len());
 
-    if let Err(e) =
-        nearblocks_client::transactions::process(&all_transactions, db, rpc_service).await
-    {
-        eprintln!("Error processing transactions: {:?}", e);
-        return Err(anyhow::anyhow!("Error processing transactions: {:?}", e));
-    }
-
-    if let Some(transaction) = all_transactions.last() {
-        let timestamp_nano = transaction.block_timestamp.parse::<i64>().unwrap();
-        let _ = db
-            .set_last_updated_info(
-                timestamp_nano,
-                transaction.block.block_height,
-                current_cursor,
-            )
-            .await;
-    }
+    nearblocks_client::transactions::process(&all_transactions, db, rpc_service).await?;
 
     Ok(())
+}
+
+fn is_fatal_error(error: &anyhow::Error) -> bool {
+    let error_msg = error.to_string();
+
+    let non_fatal_errors = ["non-fatal"];
+
+    !non_fatal_errors.iter().any(|&msg| error_msg.contains(msg))
 }
 
 pub async fn process(
     transactions: &[Transaction],
     db: &State<DB>,
     rpc_service: &State<RpcService>,
-) -> Result<(), Status> {
+) -> anyhow::Result<()> {
     for transaction in transactions.iter() {
         if let Some(action) = transaction
             .actions
@@ -120,59 +121,45 @@ pub async fn process(
                     "Proposal receipt outcome status is {:?}",
                     transaction.receipt_outcome.status
                 );
-                // eprintln!("On transaction: {:?}", transaction);
                 continue;
             }
             let result = match action.method.as_deref().unwrap_or("") {
                 "set_block_height_callback" => {
                     handle_set_block_height_callback(transaction.to_owned(), db, rpc_service).await
                 }
-                "edit_proposal" => {
+                "edit_proposal"
+                | "edit_proposal_timeline"
+                | "edit_proposal_versioned_timeline"
+                | "edit_proposal_linked_rfp"
+                | "edit_proposal_internal" => {
                     handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
                 }
-                "edit_proposal_timeline" => {
-                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
-                }
-                "edit_proposal_versioned_timeline" => {
-                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
-                }
-                "edit_proposal_linked_rfp" => {
-                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
-                }
-                "edit_proposal_internal" => {
-                    handle_edit_proposal(transaction.to_owned(), db, rpc_service).await
-                }
-                "edit_rfp_timeline" => {
-                    println!("edit_rfp_timeline");
-                    handle_edit_rfp(transaction.to_owned(), db, rpc_service).await
-                }
-                "edit_rfp" => {
-                    println!("edit_rfp");
-                    handle_edit_rfp(transaction.to_owned(), db, rpc_service).await
-                }
-                "edit_rfp_internal" => {
-                    println!("edit_rfp_internal");
-                    handle_edit_rfp(transaction.to_owned(), db, rpc_service).await
-                }
-                "cancel_rfp" => {
-                    println!("cancel_rfp");
-                    handle_edit_rfp(transaction.to_owned(), db, rpc_service).await
-                }
+                "edit_rfp_timeline"
+                | "edit_rfp"
+                | "edit_rfp_internal"
+                | "edit_rfp_linked_proposal"
+                | "edit_rfp_internal_linked_proposal"
+                | "edit_rfp_internal_linked_proposal_timeline"
+                | "cancel_rfp" => handle_edit_rfp(transaction.to_owned(), db, rpc_service).await,
                 "set_rfp_block_height_callback" => {
                     println!("set_rfp_block_height_callback");
                     handle_set_rfp_block_height_callback(transaction.to_owned(), db, rpc_service)
                         .await
                 }
                 _ => {
-                    if action.action == "FUNCTION_CALL" {
-                        // println!("Unhandled method: {:?}", action.method.as_ref().unwrap());
-                    } else {
-                        // println!("Unhandled action: {:?}", action.action);
-                    }
                     continue;
                 }
             };
-            result?;
+
+            if let Err(e) = result {
+                if is_fatal_error(&e) {
+                    eprintln!("Fatal error, stopping: {:?}", e);
+                    return Ok(());
+                } else {
+                    eprintln!("Non-fatal error, continuing: {:?}", e);
+                    continue;
+                }
+            }
         }
     }
 
@@ -188,9 +175,10 @@ mod tests {
     #[ignore]
     async fn test_fetch_all_transactions() {
         let client = nearblocks_client::ApiClient::new();
-        let (transactions, current_cursor) = fetch_all_new_transactions(&client, Some(0))
-            .await
-            .expect("Error fetching transactions");
+        let (transactions, current_cursor) =
+            fetch_all_new_transactions(&client, Some(0), Some(601))
+                .await
+                .expect("Error fetching transactions");
 
         // Check total count
         assert!(

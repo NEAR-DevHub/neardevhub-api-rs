@@ -3,7 +3,7 @@ import requests
 
 local = False 
 reset_from_zero = False # False to continue from where it left off  
-fly_app_name = "devhub-cache-api-rs"
+fly_app_name = "devhub-cache-api-rs-2"
 # ~120 calls for devhub
 # ~20 calls for infra
 # ~40 calls for events
