@@ -161,7 +161,7 @@ impl RpcService {
         &self,
         proposal_id: i32,
         block_id: i64,
-    ) -> Result<VersionedProposal, Status> {
+    ) -> anyhow::Result<VersionedProposal> {
         let result: Result<Data<VersionedProposal>, near_api::errors::QueryError<RpcQueryRequest>> =
             self.contract
                 .call_function("get_proposal", json!({ "proposal_id": proposal_id }))
@@ -182,7 +182,11 @@ impl RpcService {
                     );
                     eprintln!("{:?}", on_block_error);
                     eprintln!("{:?}", rpc_error);
-                    Err(Status::InternalServerError)
+                    Err(anyhow::anyhow!(
+                        "Failed to get proposal from RPC on block height {} and id {}",
+                        block_id,
+                        proposal_id
+                    ))
                 }
             },
         }
@@ -192,7 +196,7 @@ impl RpcService {
         &self,
         rfp_id: i32,
         block_id: i64,
-    ) -> Result<VersionedRFP, Status> {
+    ) -> anyhow::Result<VersionedRFP> {
         let result: Result<Data<VersionedRFP>, near_api::errors::QueryError<RpcQueryRequest>> =
             self.contract
                 .call_function("get_rfp", json!({ "rfp_id": rfp_id }))
@@ -206,7 +210,7 @@ impl RpcService {
             Ok(res) => Ok(res.data),
             Err(e) => {
                 eprintln!("Failed to get rfp on block: {:?}", e);
-                Err(Status::InternalServerError)
+                Err(anyhow::anyhow!("Failed to get rfp on block: {:?}", e))
             }
         }
     }
