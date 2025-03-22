@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE proposals SET author_id = $1 WHERE id = $2\n            RETURNING id\n            ",
+  "query": "\n          UPDATE proposals SET author_id = $1 WHERE id = $2\n          RETURNING id\n          ",
   "describe": {
     "columns": [
       {
@@ -19,5 +19,5 @@
       false
     ]
   },
-  "hash": "93c3ea57599a2ff19b025f98bb351746d9d5e2dca9632a608632cd897fcf5421"
+  "hash": "3f9b0223f722eb14ae35bef8b42d6c3749b7dd28e2bde5d2b4f424b103d8654e"
 }
