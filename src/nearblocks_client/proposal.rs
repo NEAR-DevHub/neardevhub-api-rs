@@ -6,18 +6,18 @@ use crate::entrypoints::proposal::proposal_types::{
 use crate::nearblocks_client::types::{Transaction, BLOCK_HEIGHT_OFFSET};
 use crate::rpc_service::RpcService;
 use devhub_shared::proposal::VersionedProposal;
-use rocket::{http::Status, State};
+use rocket::State;
 
 pub async fn handle_set_block_height_callback(
     transaction: Transaction,
     db: &State<DB>,
     rpc_service: &State<RpcService>,
-) -> Result<(), Status> {
+) -> anyhow::Result<()> {
     let action = transaction
         .actions
         .as_ref()
         .and_then(|actions| actions.first())
-        .ok_or(Status::InternalServerError)?;
+        .ok_or(anyhow::anyhow!("No actions found in transaction"))?;
 
     let json_args = action.args.clone();
 
@@ -26,7 +26,7 @@ pub async fn handle_set_block_height_callback(
 
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to begin transaction")
     })?;
     DB::upsert_proposal(
         &mut tx,
@@ -36,7 +36,7 @@ pub async fn handle_set_block_height_callback(
     .await
     .map_err(|e| {
         eprintln!("Failed to upsert proposal {}: {:?}", args.proposal.id, e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to upsert proposal")
     })?;
 
     let id = args.clone().proposal.id.try_into().unwrap();
@@ -66,12 +66,19 @@ pub async fn handle_set_block_height_callback(
                 "Failed to insert proposal snapshot for proposal {}: {:?}",
                 id, e
             );
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to insert proposal snapshot")
+        })?;
+
+    DB::set_last_updated_block_on_tx(&mut tx, transaction.block.block_height)
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to set last updated block: {:?}", e);
+            anyhow::anyhow!("Failed to set last updated block")
         })?;
 
     tx.commit().await.map_err(|e| {
         eprintln!("Failed to commit transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to commit transaction")
     })?;
 
     Ok(())
@@ -81,10 +88,10 @@ pub async fn handle_edit_proposal(
     transaction: Transaction,
     db: &State<DB>,
     rpc_service: &State<RpcService>,
-) -> Result<(), rocket::http::Status> {
+) -> anyhow::Result<()> {
     let id = get_proposal_id(&transaction).map_err(|e| {
         eprintln!("Failed to get proposal ID: {}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to get proposal ID")
     })?;
     println!("Updating proposal {}", id);
     let versioned_proposal = match rpc_service
@@ -97,13 +104,13 @@ pub async fn handle_edit_proposal(
         Ok(proposal) => proposal,
         Err(e) => {
             eprintln!("Failed to get proposal from RPC: {:?}", e);
-            return Err(Status::InternalServerError);
+            return Err(anyhow::anyhow!("Failed to get proposal from RPC"));
         }
     };
 
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to begin transaction")
     })?;
 
     let snapshot = ProposalSnapshotRecord::from_contract_proposal(
@@ -119,12 +126,19 @@ pub async fn handle_edit_proposal(
                 "Failed to insert proposal snapshot for proposal {}: {:?}",
                 id, e
             );
-            Status::InternalServerError
+            anyhow::anyhow!("Failed to insert proposal snapshot")
+        })?;
+
+    DB::set_last_updated_block_on_tx(&mut tx, transaction.block.block_height)
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to set last updated block: {:?}", e);
+            anyhow::anyhow!("Failed to set last updated block")
         })?;
 
     tx.commit().await.map_err(|e| {
         eprintln!("Failed to commit transaction: {:?}", e);
-        Status::InternalServerError
+        anyhow::anyhow!("Failed to commit transaction")
     })?;
 
     Ok(())

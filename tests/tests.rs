@@ -6,13 +6,12 @@ use futures::future::join_all;
 use devhub_cache_api::db::db_types::LastUpdatedInfo;
 use devhub_cache_api::entrypoints::proposal::proposal_types::ProposalBodyFields;
 use devhub_cache_api::nearblocks_client::types::BLOCK_HEIGHT_OFFSET;
-use devhub_cache_api::rpc_service::{self, ChangeLogType, RpcService};
+use devhub_cache_api::rpc_service::{ChangeLogType, RpcService};
 use devhub_cache_api::{
     db::db_types::ProposalWithLatestSnapshotView, separate_number_and_text,
     timestamp_to_date_string, types::PaginatedResponse,
 };
 use futures::StreamExt;
-use near_sdk::AccountId;
 use serde_json::Value;
 
 mod test_env;
@@ -25,6 +24,7 @@ pub struct Env {
     pub fastnear_api_key: String,
 }
 
+// TODO
 #[rocket::async_test]
 async fn test_proposal_ids_continuous_name_status_matches() {
     use rocket::local::asynchronous::Client;
@@ -64,7 +64,7 @@ async fn test_proposal_ids_continuous_name_status_matches() {
     let rpc_service = RpcService::new();
 
     // Create a Vec of futures for all blockchain calls
-    let futures = result.records.iter().enumerate().map(|(_ndx, record)| {
+    let futures = result.records.iter().map(|record| {
         let proposal_id = record.proposal_id;
         let rpc_service = rpc_service.clone();
         let record = record.clone();
@@ -122,7 +122,7 @@ async fn test_if_the_last_ten_changed_will_get_indexed() -> Result<(), Box<dyn s
 
     let contract_string: String =
         std::env::var("CONTRACT").unwrap_or_else(|_| "devhub.near".to_string());
-    let contract_account_id: AccountId = contract_string.parse().unwrap();
+    // let contract_account_id: AccountId = contract_string.parse().unwrap();
 
     // Get changelog from the RPC service
     let rpc_service = RpcService::new();
@@ -234,15 +234,15 @@ async fn test_all_proposals_are_indexed() {
     let mut map = HashMap::new();
     map.insert(
         "devhub.near",
-        "https://devhub-cache-api-rs.fly.dev/proposals",
+        "https://devhub-cache-api-rs-2.fly.dev/proposals",
     );
     map.insert(
         "infrastructure-committee.near",
-        "https://infra-cache-api-rs.fly.dev/proposals",
+        "https://infra-cache-api-rs-2.fly.dev/proposals",
     );
     map.insert(
         "events-committee.near",
-        "https://events-cache-api-rs.fly.dev/proposals",
+        "https://events-cache-api-rs-2.fly.dev/proposals",
     );
 
     for contract_string in contract_strings {
@@ -445,6 +445,9 @@ fn test_custom_error_handler() {
 async fn test_route_test() {
     use rocket::local::asynchronous::Client;
 
+    dotenvy::dotenv().ok();
+    let contract = std::env::var("CONTRACT").unwrap();
+
     let client = Client::tracked(devhub_cache_api::rocket(None))
         .await
         .expect("valid Rocket instance");
@@ -453,6 +456,6 @@ async fn test_route_test() {
     let response = client.get("/test").dispatch().await;
     assert_eq!(
         response.into_string().await.unwrap(),
-        "Welcome to devhub.near"
+        format!("Welcome to {}", contract)
     );
 }

@@ -181,12 +181,38 @@ async fn reset(db: &State<DB>) -> Result<(), Status> {
 }
 
 #[utoipa::path(get, path = "/proposals/sync_from_start")]
-#[get("/sync_from_start")]
+#[get("/sync_from_start/<max_transactions>")]
 async fn sync_from_start(
+    max_transactions: Option<usize>,
     db: &State<DB>,
     rpc_service: &State<RpcService>,
 ) -> Result<String, Status> {
-    let result = update_nearblocks_data(db, rpc_service, Some(0)).await;
+    let result = update_nearblocks_data(db, rpc_service, Some(0), max_transactions).await;
+
+    match result {
+        Ok(_) => Ok("Success".to_string()),
+        Err(e) => {
+            eprintln!("Error syncing from start: {:?}", e);
+            Err(Status::InternalServerError)
+        }
+    }
+}
+
+#[utoipa::path(get, path = "/proposals/continue_sync")]
+#[get("/continue_sync/<max_transactions>")]
+async fn continue_sync(
+    max_transactions: Option<usize>,
+    db: &State<DB>,
+    rpc_service: &State<RpcService>,
+) -> Result<String, Status> {
+    let last_updated_info = db.get_last_updated_info().await.unwrap();
+    let result = update_nearblocks_data(
+        db,
+        rpc_service,
+        Some(last_updated_info.after_block),
+        max_transactions,
+    )
+    .await;
 
     match result {
         Ok(_) => Ok("Success".to_string()),
@@ -269,6 +295,7 @@ pub fn stage() -> rocket::fairing::AdHoc {
                     set_cursor,
                     set_block,
                     sync_from_start,
+                    continue_sync,
                 ],
             )
             .mount(

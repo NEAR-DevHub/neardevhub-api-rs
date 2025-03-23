@@ -169,7 +169,7 @@ const print_object_diff = (cache_obj, rpc_obj) => {
 const START_ID = 250;
 const END_ID = 260;
 const ARCHIVAL_RPC_URL = "https://archival-rpc.mainnet.near.org/";
-const CACHE_API_URL = "https://devhub-cache-api-rs.fly.dev/";
+const CACHE_API_URL = "https://devhub-cache-api-rs-2.fly.dev/";
 const SKIP_TIMELINE = true;
 
 const runComparisons = async () => {

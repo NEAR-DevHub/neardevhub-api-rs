@@ -123,6 +123,7 @@ impl DB {
         )
         .execute(&self.0)
         .await?;
+
         Ok(())
     }
 
