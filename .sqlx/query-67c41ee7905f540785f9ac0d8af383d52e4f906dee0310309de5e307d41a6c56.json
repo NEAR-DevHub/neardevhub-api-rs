@@ -97,6 +97,11 @@
         "ordinal": 18,
         "name": "kind_variant_name",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 19,
+        "name": "approvers",
+        "type_info": "TextArray"
       }
     ],
     "parameters": {
@@ -124,7 +129,8 @@
       true,
       true,
       true,
-      false
+      false,
+      true
     ]
   },
   "hash": "67c41ee7905f540785f9ac0d8af383d52e4f906dee0310309de5e307d41a6c56"
