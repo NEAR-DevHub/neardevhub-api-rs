@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            WITH latest_snapshots AS (\n                SELECT DISTINCT ON (id) *\n                FROM dao_proposals\n                WHERE \n                    LOWER(description) LIKE $1 OR\n                    LOWER(hash) LIKE $1\n                ORDER BY id, submission_time DESC\n            )\n            SELECT *\n            FROM latest_snapshots\n            ORDER BY id DESC\n            LIMIT 10\n            ",
+  "query": "\n            WITH latest_snapshots AS (\n                SELECT DISTINCT ON (id) *\n                FROM dao_proposals\n                WHERE \n                    dao_instance = $1 AND\n                    (LOWER(description) LIKE $2 OR\n                    LOWER(hash) LIKE $2)\n                ORDER BY id, submission_time DESC\n            )\n            SELECT *\n            FROM latest_snapshots\n            ORDER BY id DESC\n            LIMIT 10\n            ",
   "describe": {
     "columns": [
       {
@@ -92,10 +92,16 @@
         "ordinal": 17,
         "name": "token_amount",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 18,
+        "name": "kind_variant_name",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Text"
       ]
     },
@@ -117,8 +123,9 @@
       false,
       true,
       true,
-      true
+      true,
+      false
     ]
   },
-  "hash": "805fa382898d34109ac097eb34e296f96825e0ca1b5af17cb1ae064807134631"
+  "hash": "8dc547c24be8cb7b4ec4f48af1b21c94645f5558112302930260952b4e53f734"
 }

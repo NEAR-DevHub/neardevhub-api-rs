@@ -92,6 +92,11 @@
         "ordinal": 17,
         "name": "token_amount",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 18,
+        "name": "kind_variant_name",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -118,7 +123,8 @@
       false,
       true,
       true,
-      true
+      true,
+      false
     ]
   },
   "hash": "67c41ee7905f540785f9ac0d8af383d52e4f906dee0310309de5e307d41a6c56"

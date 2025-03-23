@@ -22,9 +22,9 @@ pub struct GetDaoProposalsFilters {
     pub approvers: Option<Vec<String>>,
     // Old filters
     pub proposer: Option<String>,
-    pub kind: Option<String>,
+    pub kind: Option<Vec<String>>,
     pub total_votes: Option<i64>,
-    pub status: Option<String>,
+    pub status: Option<Vec<String>>,
     // TODO 157 proposal_action @Megha-Dev-19
     // pub proposal_action: Option<String>,
 }

@@ -105,6 +105,69 @@ pub enum ProposalKind {
     },
 }
 
+impl ProposalKind {
+    /// Returns the name of the variant as a String
+    pub fn variant_name(&self) -> String {
+        match self {
+            ProposalKind::FunctionCall { .. } => "FunctionCall",
+            ProposalKind::UpgradeRemote { .. } => "UpgradeRemote",
+            ProposalKind::Transfer { .. } => "Transfer",
+            ProposalKind::BountyDone { .. } => "BountyDone",
+            ProposalKind::Vote { .. } => "Vote",
+            ProposalKind::FactoryInfoUpdate { .. } => "FactoryInfoUpdate",
+            ProposalKind::ChangePolicyAddOrUpdateRole { .. } => "ChangePolicyAddOrUpdateRole",
+            ProposalKind::ChangePolicyRemoveRole { .. } => "ChangePolicyRemoveRole",
+            ProposalKind::ChangePolicyUpdateDefaultVotePolicy { .. } => {
+                "ChangePolicyUpdateDefaultVotePolicy"
+            }
+            ProposalKind::ChangePolicyUpdateParameters { .. } => "ChangePolicyUpdateParameters",
+            ProposalKind::ChangeConfig { .. } => "ChangeConfig",
+            ProposalKind::ChangePolicy { .. } => "ChangePolicy",
+            ProposalKind::AddMemberToRole { .. } => "AddMemberToRole",
+            ProposalKind::RemoveMemberFromRole { .. } => "RemoveMemberFromRole",
+            ProposalKind::SetStakingContract { .. } => "SetStakingContract",
+            ProposalKind::AddBounty { .. } => "AddBounty",
+            _ => "Unknown",
+        }
+        .to_string()
+    }
+
+    /// Returns the receiver_id if the variant contains one
+    pub fn receiver_id(&self) -> Option<String> {
+        match self {
+            ProposalKind::FunctionCall { receiver_id, .. } => Some(receiver_id.to_string()),
+            ProposalKind::UpgradeRemote { receiver_id, .. } => Some(receiver_id.to_string()),
+            ProposalKind::Transfer { receiver_id, .. } => Some(receiver_id.to_string()),
+            ProposalKind::BountyDone { receiver_id, .. } => Some(receiver_id.to_string()),
+            _ => None,
+        }
+    }
+
+    /// Returns the token amount if the variant contains one
+    pub fn token_amount(&self) -> Option<String> {
+        match self {
+            ProposalKind::Transfer { amount, .. } => Some(amount.0.to_string()),
+            _ => None,
+        }
+    }
+
+    /// Returns the token_id if the variant contains one, or "near" for most cases
+    pub fn token_id(&self) -> Option<String> {
+        match self {
+            ProposalKind::Transfer { token_id, .. } => Some(token_id.to_string()),
+            _ => Some("near".to_string()),
+        }
+    }
+
+    /// Serializes to JSON Value with error handling
+    pub fn to_json(&self) -> serde_json::Value {
+        serde_json::to_value(self).unwrap_or_else(|e| {
+            eprintln!("Failed to serialize ProposalKind: {:?}", e);
+            serde_json::Value::Null
+        })
+    }
+}
+
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Clone, Debug))]
 #[serde(crate = "near_sdk::serde")]

@@ -81,20 +81,21 @@ impl DB {
                 proposal_id = $2,
                 description = $3,
                 kind = $4,
-                proposer = $5,
-                status = $6,
-                submission_time = $7,
-                vote_counts = $8,
-                votes = $9,
-                total_votes = $10,
-                dao_instance = $11,
-                proposal_action = $12,
-                tx_timestamp = $13,
-                hash = $14,
-                block_height = $15,
-                receiver_id = $16,
-                token_id = $17,
-                token_amount = $18
+                kind_variant_name = $5,
+                proposer = $6,
+                status = $7,
+                submission_time = $8,
+                vote_counts = $9,
+                votes = $10,
+                total_votes = $11,
+                dao_instance = $12,
+                proposal_action = $13,
+                tx_timestamp = $14,
+                hash = $15,
+                block_height = $16,
+                receiver_id = $17,
+                token_id = $18,
+                token_amount = $19
             WHERE id = $1
             RETURNING id
             "#,
@@ -102,6 +103,7 @@ impl DB {
             sputnik_proposal.proposal_id as i32,
             sputnik_proposal.description,
             sputnik_proposal.kind,
+            sputnik_proposal.kind_variant_name,
             sputnik_proposal.proposer,
             sputnik_proposal.status,
             sputnik_proposal.submission_time,
@@ -128,9 +130,9 @@ impl DB {
             let rec = sqlx::query!(
                 r#"
                 INSERT INTO dao_proposals (
-                    description, id, proposal_id, kind, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash, block_height, receiver_id, token_id, token_amount
+                    description, id, proposal_id, kind, kind_variant_name, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash, block_height, receiver_id, token_id, token_amount
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
                 )
                 ON CONFLICT (id) DO NOTHING
                 RETURNING id
@@ -139,6 +141,7 @@ impl DB {
                 sputnik_proposal.id,
                 sputnik_proposal.proposal_id as i32,
                 sputnik_proposal.kind,
+                sputnik_proposal.kind_variant_name,
                 sputnik_proposal.proposer,
                 sputnik_proposal.status,
                 sputnik_proposal.submission_time,
@@ -190,9 +193,9 @@ impl DB {
             _ => "proposal_id DESC",
         };
 
-        let kind = filters.as_ref().and_then(|f| f.kind.as_ref());
+        let kinds: Option<&Vec<String>> = filters.as_ref().and_then(|f| f.kind.as_ref());
         let total_votes = filters.as_ref().and_then(|f| f.total_votes.as_ref());
-        let status = filters.as_ref().and_then(|f| f.status.as_ref());
+        let statuses: Option<&Vec<String>> = filters.as_ref().and_then(|f| f.status.as_ref());
         let proposer = filters.as_ref().and_then(|f| f.proposer.as_ref());
         let from_amount = filters.as_ref().and_then(|f| f.from_amount.as_ref());
         let to_amount = filters.as_ref().and_then(|f| f.to_amount.as_ref());
@@ -205,8 +208,8 @@ impl DB {
           SELECT *
           FROM dao_proposals
           WHERE dao_instance = $1
-          AND ($2 IS NULL OR substring(kind::text, 1, 40) ILIKE '%' || $2 || '%')
-          AND ($3 IS NULL OR status::text = $3)
+          AND ($2 IS NULL OR kind_variant_name = ANY($2))
+          AND ($3 IS NULL OR status = ANY($3))
           AND ($4 IS NULL OR total_votes = $4)
           AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
           AND ($6 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric >= $6::numeric ELSE false END)
@@ -228,8 +231,8 @@ impl DB {
 
         let proposals = sqlx::query_as::<_, SputnikProposalSnapshotRecord>(&sql)
             .bind(dao_instance)
-            .bind(kind)
-            .bind(status)
+            .bind(kinds)
+            .bind(statuses)
             .bind(total_votes)
             .bind(proposer)
             .bind(from_amount)
@@ -246,8 +249,8 @@ impl DB {
             SELECT COUNT(*)
             FROM dao_proposals
             WHERE dao_instance = $1
-            AND ($2 IS NULL OR substring(kind::text, 1, 40) ILIKE '%' || $2 || '%')
-            AND ($3 IS NULL OR status::text = $3)
+            AND ($2 IS NULL OR kind_variant_name = ANY($2))
+            AND ($3 IS NULL OR status = ANY($3))
             AND ($4 IS NULL OR total_votes = $4)
             AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
             AND ($6 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric >= $6::numeric ELSE false END)
@@ -265,8 +268,8 @@ impl DB {
 
         let total_count = sqlx::query_scalar::<_, i64>(count_sql)
             .bind(dao_instance)
-            .bind(kind)
-            .bind(status)
+            .bind(kinds)
+            .bind(statuses)
             .bind(total_votes)
             .bind(proposer)
             .bind(from_amount)
@@ -331,8 +334,9 @@ impl DB {
                 SELECT DISTINCT ON (id) *
                 FROM dao_proposals
                 WHERE 
-                    LOWER(description) LIKE $1 OR
-                    LOWER(hash) LIKE $1
+                    dao_instance = $1 AND
+                    (LOWER(description) LIKE $2 OR
+                    LOWER(hash) LIKE $2)
                 ORDER BY id, submission_time DESC
             )
             SELECT *
@@ -340,6 +344,7 @@ impl DB {
             ORDER BY id DESC
             LIMIT 10
             "#,
+            dao_instance,
             search_term,
         )
         .fetch_all(&self.0)

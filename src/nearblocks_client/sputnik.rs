@@ -93,19 +93,6 @@ pub async fn handle_add_proposal(
     contract: &AccountId,
     rpc_service: &RpcService,
 ) -> anyhow::Result<i64> {
-    /*
-      get_last_proposal_id actually returns the number of proposals starting from 0.
-      https://github.com/near-daos/sputnik-dao-contract/blob/3d568f9517a8c7a6510786d978bb25b180501841/sputnikdao2/src/proposals.rs#L532
-    */
-
-    // println!("Transaction: {:?}", transaction);
-
-    // let nearblocks_client = nearblocks_client::ApiClient::new();
-    // let receipt = nearblocks_client
-    //     .get_receipt_by_id(&transaction.receipt_id)
-    //     .await?;
-    // println!("Receipt: {:?}", receipt);
-
     let proposal_id = match rpc_service
         .get_last_proposal_id_on_block(
             Contract(contract.clone()),
@@ -134,7 +121,7 @@ pub async fn handle_add_proposal(
         }
     };
 
-    // Get the proposal description and kind.
+    // Extract the arguments out of the action.
     let add_proposal_action = transaction
         .actions
         .as_ref()
@@ -189,45 +176,27 @@ pub async fn handle_add_proposal(
         }
     };
 
-    let proposal_action = decode_proposal_description(&daop.proposal.description);
-
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("fatal: Failed to begin transaction: {:?}", e);
         anyhow::anyhow!("fatal: Failed to begin transaction")
     })?;
 
-    let receiver_id = get_receiver_id(&daop.proposal.kind);
-    let token_id = get_token_id(&daop.proposal.kind);
-    let token_amount = get_token_amount(&daop.proposal.kind);
-
-    let kind = serde_json::to_value(&daop.proposal.kind).unwrap_or_else(|e| {
-        eprintln!("fatal: Failed to serialize proposal kind: {:?}", e);
-        serde_json::Value::Null
-    });
-
-    let vote_counts = serde_json::to_value(daop.proposal.vote_counts).unwrap_or_else(|e| {
-        eprintln!("fatal: Failed to serialize vote counts: {:?}", e);
-        serde_json::Value::Null
-    });
-
-    let votes = serde_json::to_value(&daop.proposal.votes).unwrap_or_else(|e| {
-        eprintln!("fatal: Failed to serialize votes: {:?}", e);
-        serde_json::Value::Null
-    });
+    let proposal_action = decode_proposal_description(&daop.proposal.description);
 
     let record = SputnikProposalSnapshotRecord {
         description: daop.proposal.description,
         id: format!("{}_{}", daop.id, contract),
         proposal_id: daop.id as i32,
-        kind,
-        receiver_id,
-        token_id,
-        token_amount,
+        kind: daop.proposal.kind.to_json(),
+        kind_variant_name: daop.proposal.kind.variant_name(),
+        receiver_id: daop.proposal.kind.receiver_id(),
+        token_id: daop.proposal.kind.token_id(),
+        token_amount: daop.proposal.kind.token_amount(),
         proposer: daop.proposal.proposer.to_string(),
         status: daop.proposal.status.to_string(),
         submission_time: daop.proposal.submission_time.0 as i64,
-        vote_counts,
-        votes,
+        vote_counts: to_json_or_null(&daop.proposal.vote_counts),
+        votes: to_json_or_null(&daop.proposal.votes),
         total_votes: daop.proposal.votes.len() as i32,
         dao_instance: contract.to_string(),
         proposal_action,
@@ -266,17 +235,11 @@ pub async fn handle_add_proposal(
     Ok(transaction.block.block_height)
 }
 
-/**
- * Get's the receiver id from the proposal kind to store in a different table to query it for the history dropdown filter.
- */
-fn get_receiver_id(kind: &ProposalKind) -> Option<String> {
-    match kind {
-        ProposalKind::FunctionCall { receiver_id, .. } => Some(receiver_id.to_string()),
-        ProposalKind::UpgradeRemote { receiver_id, .. } => Some(receiver_id.to_string()),
-        ProposalKind::Transfer { receiver_id, .. } => Some(receiver_id.to_string()),
-        ProposalKind::BountyDone { receiver_id, .. } => Some(receiver_id.to_string()),
-        _ => None,
-    }
+pub fn to_json_or_null<T: Serialize>(value: &T) -> Value {
+    serde_json::to_value(value).unwrap_or_else(|e| {
+        eprintln!("Failed to serialize: {:?}", e);
+        serde_json::Value::Null
+    })
 }
 
 /**
@@ -287,20 +250,6 @@ fn get_approvers(votes: &HashMap<AccountId, Vote>) -> Vec<String> {
         .iter()
         .map(|(account_id, _)| account_id.to_string())
         .collect()
-}
-
-fn get_token_amount(kind: &ProposalKind) -> Option<String> {
-    match kind {
-        ProposalKind::Transfer { amount, .. } => Some(amount.0.to_string()),
-        _ => None,
-    }
-}
-
-fn get_token_id(kind: &ProposalKind) -> Option<String> {
-    match kind {
-        ProposalKind::Transfer { token_id, .. } => Some(token_id.to_string()),
-        _ => Some("near".to_string()),
-    }
 }
 
 pub async fn handle_act_proposal(
@@ -374,32 +323,14 @@ pub async fn handle_act_proposal(
         anyhow::anyhow!("Failed to begin transaction")
     })?;
 
-    let token_amount = get_token_amount(&dao_proposal.proposal.kind);
-    let receiver_id = get_receiver_id(&dao_proposal.proposal.kind);
-    let token_id = get_token_id(&dao_proposal.proposal.kind);
-
-    let kind = serde_json::to_value(dao_proposal.proposal.kind).unwrap_or_else(|e| {
-        eprintln!("Failed to serialize proposal kind: {:?}", e);
-        serde_json::Value::Null
-    });
-
-    let vote_counts = serde_json::to_value(dao_proposal.proposal.vote_counts).unwrap_or_else(|e| {
-        eprintln!("Failed to serialize vote counts: {:?}", e);
-        serde_json::Value::Null
-    });
-
     let approvers = get_approvers(&dao_proposal.proposal.votes);
+
     DB::upsert_dao_approvers(&mut tx, contract.to_string().as_str(), &approvers)
         .await
         .map_err(|e| {
             eprintln!("Failed to upsert dao approvers: {:?}", e);
             anyhow::anyhow!("Failed to upsert dao approvers")
         })?;
-
-    let votes = serde_json::to_value(&dao_proposal.proposal.votes).unwrap_or_else(|e| {
-        eprintln!("Failed to serialize votes: {:?}", e);
-        serde_json::Value::Null
-    });
 
     let timestamp = transaction.block_timestamp.parse::<i64>().map_err(|e| {
         eprintln!("Failed to parse block timestamp: {}", e);
@@ -415,15 +346,16 @@ pub async fn handle_act_proposal(
                 eprintln!("Failed to convert proposal_id: {}", e);
                 anyhow::anyhow!("Failed to convert proposal_id")
             })?,
-            kind,
-            receiver_id,
-            token_id,
-            token_amount,
+            kind: dao_proposal.proposal.kind.to_json(),
+            kind_variant_name: dao_proposal.proposal.kind.variant_name(),
+            receiver_id: dao_proposal.proposal.kind.receiver_id(),
+            token_id: dao_proposal.proposal.kind.token_id(),
+            token_amount: dao_proposal.proposal.kind.token_amount(),
             proposer: dao_proposal.proposal.proposer.to_string(),
             status: dao_proposal.proposal.status.to_string(),
             submission_time: dao_proposal.proposal.submission_time.0 as i64,
-            vote_counts,
-            votes,
+            vote_counts: to_json_or_null(&dao_proposal.proposal.vote_counts),
+            votes: to_json_or_null(&dao_proposal.proposal.votes),
             total_votes: dao_proposal.proposal.votes.len() as i32,
             dao_instance: contract.to_string(),
             proposal_action,
