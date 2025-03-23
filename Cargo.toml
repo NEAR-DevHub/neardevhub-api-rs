@@ -36,6 +36,7 @@ futures = "0.3.31"
 borsh = "1.5.3"
 near-jsonrpc-primitives = "0.29.1"
 near-primitives = "0.28.0"
+time = "=0.3.37"
 
 [features]
 default = ["workspaces"]
