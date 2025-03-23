@@ -17,14 +17,14 @@ pub mod sputnik_types;
 pub struct GetDaoProposalsFilters {
     pub from_amount: Option<i64>,
     pub to_amount: Option<i64>,
-    pub recipient_id: Option<String>,
-    pub requested_token_id: Option<Vec<String>>,
+    pub recipient_ids: Option<Vec<String>>,
+    pub requested_token_ids: Option<Vec<String>>,
     pub approvers: Option<Vec<String>>,
     // Old filters
     pub proposer: Option<String>,
-    pub kind: Option<Vec<String>>,
+    pub kinds: Option<Vec<String>>,
     pub total_votes: Option<i64>,
-    pub status: Option<Vec<String>>,
+    pub statuses: Option<Vec<String>>,
     // TODO 157 proposal_action @Megha-Dev-19
     // pub proposal_action: Option<String>,
 }

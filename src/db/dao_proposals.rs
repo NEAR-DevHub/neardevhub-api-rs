@@ -88,14 +88,15 @@ impl DB {
                 vote_counts = $9,
                 votes = $10,
                 total_votes = $11,
-                dao_instance = $12,
-                proposal_action = $13,
-                tx_timestamp = $14,
-                hash = $15,
-                block_height = $16,
-                receiver_id = $17,
-                token_id = $18,
-                token_amount = $19
+                approvers = $12,
+                dao_instance = $13,
+                proposal_action = $14,
+                tx_timestamp = $15,
+                hash = $16,
+                block_height = $17,
+                receiver_id = $18,
+                token_id = $19,
+                token_amount = $20
             WHERE id = $1
             RETURNING id
             "#,
@@ -110,6 +111,7 @@ impl DB {
             sputnik_proposal.vote_counts,
             sputnik_proposal.votes,
             sputnik_proposal.total_votes as i32,
+            sputnik_proposal.approvers.as_deref(),
             sputnik_proposal.dao_instance,
             sputnik_proposal.proposal_action,
             sputnik_proposal.tx_timestamp,
@@ -130,9 +132,9 @@ impl DB {
             let rec = sqlx::query!(
                 r#"
                 INSERT INTO dao_proposals (
-                    description, id, proposal_id, kind, kind_variant_name, proposer, status, submission_time, vote_counts, votes, total_votes, dao_instance, proposal_action, tx_timestamp, hash, block_height, receiver_id, token_id, token_amount
+                    description, id, proposal_id, kind, kind_variant_name, proposer, status, submission_time, vote_counts, votes, total_votes, approvers, dao_instance, proposal_action, tx_timestamp, hash, block_height, receiver_id, token_id, token_amount
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
                 )
                 ON CONFLICT (id) DO NOTHING
                 RETURNING id
@@ -148,6 +150,7 @@ impl DB {
                 sputnik_proposal.vote_counts,
                 sputnik_proposal.votes,
                 sputnik_proposal.total_votes as i32,
+                sputnik_proposal.approvers.as_deref(),
                 sputnik_proposal.dao_instance,
                 sputnik_proposal.proposal_action,
                 sputnik_proposal.tx_timestamp,
@@ -193,14 +196,16 @@ impl DB {
             _ => "proposal_id DESC",
         };
 
-        let kinds: Option<&Vec<String>> = filters.as_ref().and_then(|f| f.kind.as_ref());
+        let kinds: Option<&Vec<String>> = filters.as_ref().and_then(|f| f.kinds.as_ref());
         let total_votes = filters.as_ref().and_then(|f| f.total_votes.as_ref());
-        let statuses: Option<&Vec<String>> = filters.as_ref().and_then(|f| f.status.as_ref());
+        let statuses: Option<&Vec<String>> = filters.as_ref().and_then(|f| f.statuses.as_ref());
         let proposer = filters.as_ref().and_then(|f| f.proposer.as_ref());
         let from_amount = filters.as_ref().and_then(|f| f.from_amount.as_ref());
         let to_amount = filters.as_ref().and_then(|f| f.to_amount.as_ref());
-        let recipient_id = filters.as_ref().and_then(|f| f.recipient_id.as_ref());
-        let requested_token_ids = filters.as_ref().and_then(|f| f.requested_token_id.as_ref());
+        let recipient_ids = filters.as_ref().and_then(|f| f.recipient_ids.as_ref());
+        let requested_token_ids = filters
+            .as_ref()
+            .and_then(|f| f.requested_token_ids.as_ref());
         let approvers = filters.as_ref().and_then(|f| f.approvers.as_ref());
 
         let sql = format!(
@@ -214,15 +219,9 @@ impl DB {
           AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
           AND ($6 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric >= $6::numeric ELSE false END)
           AND ($7 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric <= $7::numeric ELSE false END)
-          AND ($8 IS NULL OR receiver_id::text ILIKE '%' || $8 || '%')
-          AND ($9 IS NULL OR token_id::text = ANY($9))
-          AND ($10 IS NULL OR (
-              SELECT EXISTS (
-                  SELECT 1
-                  FROM jsonb_object_keys(votes::jsonb) AS voter
-                  WHERE voter = ANY($10)
-              )
-          ))
+          AND ($8 IS NULL OR receiver_id = ANY($8))
+          AND ($9 IS NULL OR token_id = ANY($9))
+          AND ($10 IS NULL OR approvers && $10)
           ORDER BY {}
           LIMIT $11 OFFSET $12
         "#,
@@ -237,7 +236,7 @@ impl DB {
             .bind(proposer)
             .bind(from_amount)
             .bind(to_amount)
-            .bind(recipient_id)
+            .bind(recipient_ids)
             .bind(requested_token_ids)
             .bind(approvers)
             .bind(limit)
@@ -255,15 +254,9 @@ impl DB {
             AND ($5 IS NULL OR proposer::text ILIKE '%' || $5 || '%')
             AND ($6 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric >= $6::numeric ELSE false END)
             AND ($7 IS NULL OR CASE WHEN token_amount ~ '^[0-9]+$' THEN token_amount::numeric <= $7::numeric ELSE false END)
-            AND ($8 IS NULL OR receiver_id::text ILIKE '%' || $8 || '%')
-            AND ($9 IS NULL OR token_id::text = ANY($9))
-            AND ($10 IS NULL OR (
-              SELECT EXISTS (
-                  SELECT 1
-                  FROM jsonb_object_keys(votes::jsonb) AS voter
-                  WHERE voter = ANY($10)
-              )
-          ))
+            AND ($8 IS NULL OR receiver_id = ANY($8))
+            AND ($9 IS NULL OR token_id = ANY($9))
+            AND ($10 IS NULL OR approvers && $10)
         "#;
 
         let total_count = sqlx::query_scalar::<_, i64>(count_sql)
@@ -274,7 +267,7 @@ impl DB {
             .bind(proposer)
             .bind(from_amount)
             .bind(to_amount)
-            .bind(recipient_id)
+            .bind(recipient_ids)
             .bind(requested_token_ids)
             .bind(approvers)
             .fetch_one(&self.0)

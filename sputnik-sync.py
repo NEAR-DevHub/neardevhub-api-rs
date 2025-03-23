@@ -1,5 +1,5 @@
 import time
-import requests
+import requests # type: ignore
 
 local = False 
 reset_from_zero = False # False to continue from where it left off  

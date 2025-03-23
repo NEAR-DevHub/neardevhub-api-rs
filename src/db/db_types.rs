@@ -161,6 +161,7 @@ pub struct SputnikProposalSnapshotRecord {
     pub dao_instance: String,
     pub proposal_action: String,
     pub tx_timestamp: i64,
+    pub approvers: Option<Vec<String>>,
     pub hash: String,
     pub block_height: i64,
 }

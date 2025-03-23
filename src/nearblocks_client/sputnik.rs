@@ -33,6 +33,87 @@ pub struct ActProposalArgs {
     pub memo: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct ProposalDescriptionData {
+    pub proposal_action: Option<String>,
+    pub is_transfer: bool,
+    pub is_asset_exchange: bool,
+    pub is_stake_request: bool,
+    pub raw_data: HashMap<String, String>,
+}
+
+pub fn parse_proposal_description(description: &str) -> ProposalDescriptionData {
+    // First try to parse as JSON
+    if let Ok(json_value) = serde_json::from_str::<Value>(description) {
+        if let Some(obj) = json_value.as_object() {
+            let mut result = ProposalDescriptionData::default();
+
+            // Extract raw data
+            for (key, value) in obj {
+                if let Some(str_value) = value.as_str() {
+                    result.raw_data.insert(key.clone(), str_value.to_string());
+                } else {
+                    result.raw_data.insert(key.clone(), value.to_string());
+                }
+            }
+
+            // Extract specific fields
+            if let Some(action) = obj.get("proposal_action").and_then(|v| v.as_str()) {
+                result.proposal_action = Some(action.to_string());
+                result.is_transfer = action == "transfer";
+                result.is_asset_exchange = action == "asset-exchange";
+                result.is_stake_request = matches!(action, "stake" | "unstake" | "withdraw");
+            }
+
+            // Check for explicit stake request flag
+            if let Some(is_stake) = obj.get("isStakeRequest") {
+                result.is_stake_request = is_stake.as_bool().unwrap_or(false)
+                    || is_stake.as_str().map(|s| s == "true").unwrap_or(false);
+            }
+
+            return result;
+        }
+    }
+
+    // If JSON parsing fails, try markdown format
+    let mut result = ProposalDescriptionData::default();
+
+    for line in description.split("<br>") {
+        if let Some(captures) = line.strip_prefix("* ").and_then(|s| {
+            let parts: Vec<&str> = s.splitn(2, ": ").collect();
+            if parts.len() == 2 {
+                Some((parts[0], parts[1]))
+            } else {
+                None
+            }
+        }) {
+            let (key, value) = captures;
+
+            // Convert "Key Name" to "key_name"
+            let normalized_key = key.trim().to_lowercase().replace(" ", "_");
+            let value = value.trim().to_string();
+
+            // Store in raw data
+            result
+                .raw_data
+                .insert(normalized_key.clone(), value.clone());
+
+            // Set specific flags
+            if normalized_key == "proposal_action" {
+                result.proposal_action = Some(value.clone());
+                result.is_transfer = value == "transfer";
+                result.is_asset_exchange = value == "asset-exchange";
+                result.is_stake_request =
+                    matches!(value.as_str(), "stake" | "unstake" | "withdraw");
+            } else if normalized_key == "isstakerequest" {
+                result.is_stake_request = value == "true";
+            }
+        }
+    }
+
+    result
+}
+
 fn parse_key_to_readable_format(key: &str) -> String {
     let key = key.replace('_', " ");
     let re = Regex::new(r"([a-z])([A-Z])").unwrap();
@@ -200,6 +281,7 @@ pub async fn handle_add_proposal(
         total_votes: daop.proposal.votes.len() as i32,
         dao_instance: contract.to_string(),
         proposal_action,
+        approvers: None,
         tx_timestamp: transaction.block_timestamp.parse::<i64>().unwrap(),
         hash: transaction.transaction_hash,
         block_height: transaction.block.block_height,
@@ -308,15 +390,11 @@ pub async fn handle_act_proposal(
                     timestamp: chrono::Utc::now(),
                 })
                 .await;
-            // TODO: this is blocking the PR sometimes we get this error
-            //
             return Err(anyhow::anyhow!(
                 "fatal: Failed to get proposal from RPC in handle_act_proposal"
             ));
         }
     };
-
-    let proposal_action = decode_proposal_description(&dao_proposal.proposal.description);
 
     let mut tx = db.begin().await.map_err(|e| {
         eprintln!("Failed to begin transaction: {:?}", e);
@@ -324,6 +402,7 @@ pub async fn handle_act_proposal(
     })?;
 
     let approvers = get_approvers(&dao_proposal.proposal.votes);
+    let proposal_action = decode_proposal_description(&dao_proposal.proposal.description);
 
     DB::upsert_dao_approvers(&mut tx, contract.to_string().as_str(), &approvers)
         .await
@@ -358,6 +437,7 @@ pub async fn handle_act_proposal(
             votes: to_json_or_null(&dao_proposal.proposal.votes),
             total_votes: dao_proposal.proposal.votes.len() as i32,
             dao_instance: contract.to_string(),
+            approvers: Some(approvers),
             proposal_action,
             tx_timestamp: timestamp,
             hash: transaction.transaction_hash,
@@ -419,5 +499,121 @@ mod tests {
                 expected_results[i], result
             );
         }
+    }
+
+    #[test]
+    fn test_json_description() {
+        let json = r#"{"proposal_action": "transfer", "amount": "100 NEAR"}"#;
+        let result = parse_proposal_description(json);
+
+        assert_eq!(result.proposal_action, Some("transfer".to_string()));
+        assert!(result.is_transfer);
+        assert!(!result.is_asset_exchange);
+        assert!(!result.is_stake_request);
+        assert_eq!(result.raw_data.get("amount"), Some(&"100 NEAR".to_string()));
+    }
+
+    #[test]
+    fn test_number_of_descriptions() {
+        let descriptions = [
+          // Payments: proposal_action is transfer but proposalKind could also be transfer
+          "{\"isStakeRequest\":true,\"warningNotes\":\"Approve to continue staking with this validator\"}",
+          "* Proposal Action: withdraw <br>* Show After Proposal Id Approved: 61 <br>* Custom Notes: Following to [#61](/treasury-testing-infinex.near/widget/app?page=stake-delegation&selectedTab=History&highlightProposalId=61) unstake request",
+          "{\"title\":\"DevHub Developer Contributor report by Megha for 09/09/2024 - 10/06/2024\",\"summary\":\"Worked on integrating new features to treasury dashboard, like asset exchange using the ref-sdk API, stake delegation, made first version live for devhub, fixed some bugs with devhub and other instances.\",\"notes\":\"Treasury balance insufficient\",\"proposalId\":220}",
+          "Change policy",
+          "{}",
+          // Stake delegation: proposal_action is stake or unstake or withdraw and isStakeRequest is true.
+          "* Proposal Action: stake <br>* Custom Notes: Approve to continue staking with this validator",
+          "* Proposal Action: unstake <br>* Notes: Unstake 0.5N",
+          "* Proposal Action: stake",
+          "* Proposal Action: withdraw <br>* Show After Proposal Id Approved: 58 <br>* Custom Notes: Following to [#58](/treasury-testing-infinex.near/widget/app?page=stake-delegation&selectedTab=History&highlightProposalId=58) unstake request",
+          // Asset exchange
+          "* Proposal Action: asset-exchange <br>* Notes: test <br>* Token In: wrap.near <br>* Token Out: 17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1 <br>* Amount In: 0.5 <br>* Slippage: 1 <br>* Amount Out: 1.40223",
+          "* Proposal Action: asset-exchange <br>* Token In: near <br>* Token Out: wrap.near <br>* Amount In: 1 <br>* Slippage: 1 <br>* Amount Out: 1"
+        ];
+
+        let expected_results: Vec<ProposalDescriptionData> = vec![
+            ProposalDescriptionData {
+                proposal_action: None,
+                is_transfer: false,
+                is_asset_exchange: false,
+                is_stake_request: true,
+                raw_data: HashMap::from([("warningNotes".to_string(), "Approve to continue staking with this validator".to_string())]),
+            },
+            ProposalDescriptionData {
+                proposal_action: Some("withdraw".to_string()),
+                is_transfer: false,
+                is_asset_exchange: false,
+                is_stake_request: true,
+                raw_data: HashMap::from([("showAfterProposalIdApproved".to_string(), "61".to_string()), ("customNotes".to_string(), "Following to [#61](/treasury-testing-infinex.near/widget/app?page=stake-delegation&selectedTab=History&highlightProposalId=61) unstake request".to_string())]),
+            },
+            // TODO: ask megha about these examples.
+            ProposalDescriptionData {
+                proposal_action: Some("withdraw".to_string()),
+                is_transfer: true,
+                is_asset_exchange: false,
+                is_stake_request: false,
+                raw_data: HashMap::new(),
+            },
+            ProposalDescriptionData {
+                proposal_action: Some("withdraw".to_string()),
+                is_transfer: true,
+                is_asset_exchange: false,
+                is_stake_request: false,
+                raw_data: HashMap::new(),
+            },
+            ProposalDescriptionData {
+                proposal_action: Some("withdraw".to_string()),
+                is_transfer: true,
+                is_asset_exchange: false,
+                is_stake_request: false,
+                raw_data: HashMap::new(),
+            },
+            ProposalDescriptionData {
+                proposal_action: Some("withdraw".to_string()),
+                is_transfer: true,
+                is_asset_exchange: false,
+                is_stake_request: false,
+                raw_data: HashMap::new(),
+            },
+            ProposalDescriptionData {
+                proposal_action: Some("withdraw".to_string()),
+                is_transfer: true,
+                is_asset_exchange: false,
+                is_stake_request: false,
+                raw_data: HashMap::new(),
+            },
+            ProposalDescriptionData {
+                proposal_action: Some("withdraw".to_string()),
+                is_transfer: true,
+                is_asset_exchange: false,
+                is_stake_request: false,
+                raw_data: HashMap::new(),
+            },
+        ];
+        for (i, description) in descriptions.iter().enumerate() {
+            let result = parse_proposal_description(description);
+            assert_eq!(result.proposal_action, expected_results[i].proposal_action);
+        }
+    }
+
+    #[test]
+    fn test_markdown_description() {
+        let markdown = "* Proposal Action: stake\n* Amount: 200 NEAR<br>* Duration: 30 days";
+        let result = parse_proposal_description(markdown);
+
+        assert_eq!(result.proposal_action, Some("stake".to_string()));
+        assert!(!result.is_transfer);
+        assert!(!result.is_asset_exchange);
+        assert!(result.is_stake_request);
+        assert_eq!(result.raw_data.get("amount"), Some(&"200 NEAR".to_string()));
+    }
+
+    #[test]
+    fn test_explicit_stake_flag() {
+        let json = r#"{"isStakeRequest": true, "amount": "300 NEAR"}"#;
+        let result = parse_proposal_description(json);
+
+        assert!(result.is_stake_request);
     }
 }
