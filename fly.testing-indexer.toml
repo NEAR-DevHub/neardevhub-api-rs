@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for testing-indexer on 2024-11-15T08:25:29-06:00
+# fly.toml app configuration file generated for testing-indexer on 2025-01-22T12:02:21-06:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'testing-indexer'
+app = 'testing-indexer-2'
 primary_region = 'ams'
 
 [build]

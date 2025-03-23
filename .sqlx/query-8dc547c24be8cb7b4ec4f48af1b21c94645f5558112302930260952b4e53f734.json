@@ -1,0 +1,131 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH latest_snapshots AS (\n                SELECT DISTINCT ON (id) *\n                FROM dao_proposals\n                WHERE \n                    dao_instance = $1 AND\n                    (LOWER(description) LIKE $2 OR\n                    LOWER(hash) LIKE $2)\n                ORDER BY id, submission_time DESC\n            )\n            SELECT *\n            FROM latest_snapshots\n            ORDER BY id DESC\n            LIMIT 10\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "description",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "proposal_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "proposer",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "submission_time",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "vote_counts",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "votes",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 9,
+        "name": "total_votes",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "dao_instance",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "proposal_action",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "tx_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "hash",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 14,
+        "name": "block_height",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 15,
+        "name": "receiver_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 16,
+        "name": "token_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 17,
+        "name": "token_amount",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 18,
+        "name": "kind_variant_name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "8dc547c24be8cb7b4ec4f48af1b21c94645f5558112302930260952b4e53f734"
+}

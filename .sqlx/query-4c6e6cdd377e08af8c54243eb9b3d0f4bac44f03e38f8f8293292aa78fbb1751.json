@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO proposal_snapshots (\n            proposal_id,\n            block_height,\n            ts,\n            editor_id,\n            social_db_post_block_height,\n            labels,\n            proposal_version,\n            proposal_body_version,\n            name,\n            category,\n            summary,\n            description,\n            linked_proposals,\n            linked_rfp,\n            requested_sponsorship_usd_amount,\n            requested_sponsorship_paid_in_currency,\n            requested_sponsor,\n            receiver_account,\n            supervisor,\n            timeline,\n            views\n        ) VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8,\n            $9, $10, $11, $12, $13, $14,\n            $15, $16, $17, $18, $19, $20, $21\n        ) ON CONFLICT (proposal_id, ts) DO UPDATE SET\n            block_height = $2,\n            editor_id = $4,\n            social_db_post_block_height = $5,\n            labels = $6,\n            proposal_version = $7,\n            proposal_body_version = $8,\n            name = $9,\n            category = $10,\n            summary = $11,\n            description = $12,\n            linked_proposals = $13,\n            linked_rfp = $14,\n            requested_sponsorship_usd_amount = $15,\n            requested_sponsorship_paid_in_currency = $16,\n            requested_sponsor = $17,\n            receiver_account = $18,\n            supervisor = $19,\n            timeline = $20,\n            views = $21\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8",
+        "Int8",
+        "Varchar",
+        "Int8",
+        "Jsonb",
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Varchar",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Int4",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Jsonb",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4c6e6cdd377e08af8c54243eb9b3d0f4bac44f03e38f8f8293292aa78fbb1751"
+}

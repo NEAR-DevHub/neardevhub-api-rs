@@ -52,6 +52,7 @@ jobs:
           NEARBLOCKS_API_KEY: ${{ secrets.NEARBLOCKS_API_KEY }}
           FASTNEAR_API_KEY: ${{ secrets.FASTNEAR_API_KEY }}
           ENV: GH_ACTION
+          SPUTNIK_CONTRACT: testing-treasury.sputnik-dao.near
 
       - name: Run clippy and audit
         run:

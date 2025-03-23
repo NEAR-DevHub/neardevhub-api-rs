@@ -4,3 +4,4 @@ use near_workspaces::{Account, Contract, Worker};
 use std::path::Path;
 
 mod contract_test;
+mod sputnik_tests;

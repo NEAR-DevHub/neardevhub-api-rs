@@ -1,0 +1,131 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT *\n            FROM dao_proposals\n            WHERE hash = $1\n            AND dao_instance = $2\n            ORDER BY submission_time DESC\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "description",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "proposal_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "proposer",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "submission_time",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "vote_counts",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "votes",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 9,
+        "name": "total_votes",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "dao_instance",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "proposal_action",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "tx_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "hash",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 14,
+        "name": "block_height",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 15,
+        "name": "receiver_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 16,
+        "name": "token_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 17,
+        "name": "token_amount",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 18,
+        "name": "kind_variant_name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "67c41ee7905f540785f9ac0d8af383d52e4f906dee0310309de5e307d41a6c56"
+}
