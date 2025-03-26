@@ -3,7 +3,7 @@ import requests # type: ignore
 
 local = False 
 reset_from_zero = False # False to continue from where it left off  
-fly_app_name = "sputnik-indexer-2"
+fly_app_name = "testing-indexer-2"
 max_calls = 120 # This is for devhub to catch up to the latest block
 
 base_url = f"http://localhost:8080/" if local else f"https://{fly_app_name}.fly.dev"
@@ -22,8 +22,8 @@ def call_api(count, sputnik_contract):
         print("An error2 occurred:", e)
         print(response.json())
 
-def reset_cache(sputnik_contract):
-    url = f"{base_url}/dao/admin/{sputnik_contract}/reset"  # Replace with your API URL
+def start_at_block0(sputnik_contract):
+    url = f"{base_url}/dao/proposals/{sputnik_contract}/block/0"  # Replace with your API URL
     try:
         response = requests.get(url)
         if response.status_code == 200:
@@ -35,14 +35,20 @@ def reset_cache(sputnik_contract):
 
 def main():
     # TODO should be a list of sputnik contracts
-    sputnik_contract = "testing-treasury.sputnik-dao.near"
+    sputnik_contract = "testing-treasury.sputnik-dao.near" # shitzu "testing-treasury.sputnik-dao.near"
     if reset_from_zero:
-        reset_cache(sputnik_contract)
+        start_at_block0(sputnik_contract)
     count = 0
     while count < max_calls: 
-        call_api(count, sputnik_contract)
+        call_api(count, sputnik_contract) # ~ 2 minutes before we hit the max archival calls from fastnear
         count += 1
-        time.sleep(0.5)
+        time.sleep(3 * 60) # ~ +3 minutes to cool down from the rate limit.
+        # It indexes about 30-60 proposals and their votes
+        # so if we want to index 250 proposals per DAO,  it will take 5*5=25 minutes per DAO
+        # 20 DAO = 500 minutes = 8.3 hours
+        
+        # not all DAO's have 250 proposals, so I will make a list of DAO's to index
+        # and how long to run each one.
 
 if __name__ == "__main__":
     main()

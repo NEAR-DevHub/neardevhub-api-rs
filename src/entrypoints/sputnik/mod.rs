@@ -185,35 +185,7 @@ async fn reset_dao_proposals(account_id: &str, db: &State<DB>) -> Result<(), Sta
     Ok(())
 }
 
-#[get("/admin/<account_id>/resetandtest")]
-async fn reset_and_test(
-    account_id: &str,
-    db: &State<DB>,
-    rpc_service: &State<RpcService>,
-) -> Json<PaginatedResponse<SputnikProposalSnapshotRecord>> {
-    let contract = match AccountId::from_str(account_id) {
-        Ok(contract) => contract,
-        Err(_) => {
-            eprintln!("Invalid account id: {}", account_id);
-            AccountId::from_str("testing-astradao.sputnik-dao.near").unwrap()
-        }
-    };
-
-    db.remove_all_dao_proposals(account_id).await.unwrap();
-
-    let _ = update_dao_nearblocks_data(db.inner(), &contract, rpc_service.inner(), Some(0)).await;
-
-    let (proposals, total) = fetch_dao_proposals(db, account_id, 10, "id_desc", 0, None).await;
-
-    Json(PaginatedResponse::new(
-        proposals.into_iter().collect(),
-        1,
-        10,
-        total.try_into().unwrap(),
-        None, // TODO add newly indexed
-    ))
-}
-
+// TODO: remove this we can just set the last indexed block to 0 and call get_dao_proposals
 #[utoipa::path(get, path = "/proposals/sync_from_start/<account_id>")]
 #[get("/proposals/sync_from_start/<account_id>", rank = 2)]
 async fn sync_from_start(
@@ -229,6 +201,10 @@ async fn sync_from_start(
         }
     };
 
+    // set the last indexed block to 0
+    let _ = db.set_last_updated_info_for_contract(&contract, 0, 0).await;
+
+    // start syncing
     let result = update_dao_nearblocks_data(db, &contract, rpc_service, Some(0)).await;
 
     match result {
@@ -320,7 +296,6 @@ pub fn stage() -> rocket::fairing::AdHoc {
                 set_block,
                 get_dao_proposals,
                 reset_dao_proposals,
-                reset_and_test,
                 search,
                 sync_from_start,
                 get_unique_receivers,
