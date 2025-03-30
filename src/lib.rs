@@ -100,6 +100,7 @@ pub fn rocket(rpc_service: Option<RpcService>) -> rocket::Rocket<rocket::Build> 
         "https://near.social",
         "https://neardevhub.org",
         "https://devhub.near.page",
+        "https://*.near.page",
         "https://events-committee.near.page/",
         "https://infrastructure-committee.near.page/",
         "https://devhub-cache-api-rs-2.fly.dev",
