@@ -100,7 +100,7 @@ pub fn rocket(rpc_service: Option<RpcService>) -> rocket::Rocket<rocket::Build> 
         "https://near.social",
         "https://neardevhub.org",
         "https://devhub.near.page",
-        "https://*.near.page",
+        "https://near.page",
         "https://events-committee.near.page/",
         "https://infrastructure-committee.near.page/",
         "https://devhub-cache-api-rs-2.fly.dev",
@@ -111,7 +111,11 @@ pub fn rocket(rpc_service: Option<RpcService>) -> rocket::Rocket<rocket::Build> 
     let allowed_origins = Origins {
         allow_null: true, // Iframe simpleMDE mentioning proposals
         exact: exact_origins.unwrap().exact,
-        ..Default::default()
+        regex: Some(
+            vec![r"^https://[^/]+\.near\.page$".to_string()]
+                .into_iter()
+                .collect(),
+        ),
     };
 
     let cors = rocket_cors::CorsOptions {
