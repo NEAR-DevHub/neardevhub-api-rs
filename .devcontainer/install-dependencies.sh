@@ -1,12 +1,17 @@
 #!/bin/bash
 sudo apt update
 sudo apt install -y postgresql
-sudo apt install libudev-dev
+sudo apt install -y libudev-dev
+sudo apt install -y pkg-config
 
 cargo install sqlx-cli
 
 # Start PostgreSQL service
 sudo service postgresql start
+
+# Export database URL for SQLx
+echo "export DATABASE_URL=postgres://devhub_cache_api_rs:password@127.0.0.1:5432/devhub_cache_api_rs" >> ~/.bashrc
+source ~/.bashrc
 
 # Switch to postgres user to set up roles and database
 sudo su - postgres -c "
@@ -15,10 +20,6 @@ sudo su - postgres -c "
     psql -c \"ALTER ROLE devhub_cache_api_rs SUPERUSER;\"
     psql -c \"GRANT ALL PRIVILEGES ON DATABASE devhub_cache_api_rs TO devhub_cache_api_rs;\"
 "
-
-# Export database URL for SQLx
-echo "export DATABASE_URL=postgres://devhub_cache_api_rs:password@127.0.0.1:5432/devhub_cache_api_rs" >> ~/.bashrc
-source ~/.bashrc
 
 # Create the database using SQLx
 sqlx database create

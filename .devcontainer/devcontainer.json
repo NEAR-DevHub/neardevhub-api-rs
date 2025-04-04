@@ -4,7 +4,7 @@
     "memory": "8gb",
     "storage": "32gb"
   },
-  "image": "mcr.microsoft.com/devcontainers/universal:focal",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
     "ghcr.io/devcontainers/features/rust:1": {}
   },
